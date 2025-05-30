@@ -2,16 +2,25 @@ name = "nextpint-api"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "nextpint-db"
+database_id = "YOUR_DATABASE_ID" # Replace with actual ID after creation
+
 [env.production]
 name = "nextpint-api"
-route = { pattern = "api.nextpint.app/*", custom_domain = true }
+# Workers routes will be set up in Cloudflare dashboard
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "nextpint-db"
+database_id = "YOUR_DATABASE_ID" # Replace with actual ID after creation
 
 [env.development]
 name = "nextpint-api-dev"
-route = { pattern = "api-dev.nextpint.app/*", custom_domain = true }
 
-# D1 Database binding
-[[d1_databases]]
+[[env.development.d1_databases]]
 binding = "DB"
 database_name = "nextpint-db"
 database_id = "YOUR_DATABASE_ID" # Replace with actual ID after creation

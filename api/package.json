@@ -5,9 +5,14 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "./scripts/deploy.sh",
+    "deploy:dev": "./scripts/deploy.sh dev",
+    "deploy:prod": "./scripts/deploy.sh prod",
+    "setup": "./scripts/setup.sh",
+    "db:create": "wrangler d1 create nextpint-db",
     "db:init": "wrangler d1 execute nextpint-db --file=./schema.sql",
     "db:seed": "wrangler d1 execute nextpint-db --file=./seed.sql",
+    "db:setup": "npm run db:init && npm run db:seed",
     "test": "vitest",
     "type-check": "tsc --noEmit"
   },
