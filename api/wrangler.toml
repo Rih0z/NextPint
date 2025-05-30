@@ -1,0 +1,29 @@
+name = "nextpint-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[env.production]
+name = "nextpint-api"
+route = { pattern = "api.nextpint.app/*", custom_domain = true }
+
+[env.development]
+name = "nextpint-api-dev"
+route = { pattern = "api-dev.nextpint.app/*", custom_domain = true }
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "nextpint-db"
+database_id = "YOUR_DATABASE_ID" # Replace with actual ID after creation
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+API_VERSION = "v1"
+
+[env.development.vars]
+ENVIRONMENT = "development"
+
+# CORS settings
+[build]
+command = "npm run type-check"
