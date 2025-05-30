@@ -6,15 +6,8 @@ NextPintは、ビール愛好家向けのAIプロンプトプロバイダーア�
 
 ### Web アプリケーション
 - **本番環境**: [https://nextpint-web.pages.dev](https://nextpint-web.pages.dev)
-- **最新デプロイ**: [https://9a513b5b.nextpint-web.pages.dev](https://9a513b5b.nextpint-web.pages.dev)
 - **プラットフォーム**: Cloudflare Pages
 - **デザイン**: Netflix/Uber風モダンダークテーマ
-
-### API エンドポイント
-- **ベースURL**: [https://nextpint-api.riho-dare.workers.dev](https://nextpint-api.riho-dare.workers.dev)
-- **ヘルスチェック**: [/v1/health](https://nextpint-api.riho-dare.workers.dev/v1/health)
-- **プロンプトテンプレート**: [/v1/templates](https://nextpint-api.riho-dare.workers.dev/v1/templates)
-- **プラットフォーム**: Cloudflare Workers + D1 Database
 
 ## 🍺 特徴
 
