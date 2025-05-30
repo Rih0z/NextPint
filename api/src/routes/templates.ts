@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { Env } from '../index';
+import type { WorkerEnv } from '../index';
 
-const templates = new Hono<{ Bindings: Env }>();
+const templates = new Hono<{ Bindings: WorkerEnv }>();
 
 // GET /v1/templates
 templates.get('/', async (c) => {

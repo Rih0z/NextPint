@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { Env } from '../index';
+import type { WorkerEnv } from '../index';
 
-const health = new Hono<{ Bindings: Env }>();
+const health = new Hono<{ Bindings: WorkerEnv }>();
 
 // GET /v1/health
 health.get('/', (c) => {

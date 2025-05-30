@@ -1,16 +1,15 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { D1Database } from '@cloudflare/workers-types';
 import { templateRoutes } from './routes/templates';
 import { healthRoutes } from './routes/health';
 
-export interface Env {
+export type WorkerEnv = {
   DB: D1Database;
   ENVIRONMENT: string;
   API_VERSION: string;
 }
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: WorkerEnv }>();
 
 // CORS middleware
 app.use('*', cors({

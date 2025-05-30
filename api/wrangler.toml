@@ -6,7 +6,7 @@ compatibility_date = "2024-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "nextpint-db"
-database_id = "YOUR_DATABASE_ID" # Replace with actual ID after creation
+database_id = "6d983f0f-06af-4a55-8b21-611b31ebeb6e"
 
 [env.production]
 name = "nextpint-api"
@@ -15,7 +15,7 @@ name = "nextpint-api"
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "nextpint-db"
-database_id = "YOUR_DATABASE_ID" # Replace with actual ID after creation
+database_id = "6d983f0f-06af-4a55-8b21-611b31ebeb6e"
 
 [env.development]
 name = "nextpint-api-dev"
@@ -23,7 +23,7 @@ name = "nextpint-api-dev"
 [[env.development.d1_databases]]
 binding = "DB"
 database_name = "nextpint-db"
-database_id = "YOUR_DATABASE_ID" # Replace with actual ID after creation
+database_id = "6d983f0f-06af-4a55-8b21-611b31ebeb6e"
 
 # Environment variables
 [vars]
