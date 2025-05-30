@@ -13,7 +13,7 @@ const app = new Hono<{ Bindings: WorkerEnv }>();
 
 // CORS middleware
 app.use('*', cors({
-  origin: ['http://localhost:*', 'https://*.nextpint.app'],
+  origin: '*', // 開発・テスト用に一時的に全てのオリジンを許可
   allowHeaders: ['Content-Type', 'Accept'],
   allowMethods: ['GET', 'OPTIONS'],
   exposeHeaders: [],

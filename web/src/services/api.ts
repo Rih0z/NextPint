@@ -15,20 +15,34 @@ export class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...options?.headers,
-      },
-      ...options,
-    });
+    try {
+      console.log(`API Request: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...options?.headers,
+        },
+        ...options,
+      });
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      console.log(`API Response Status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`API Error Response: ${errorText}`);
+        throw new Error(`API request failed: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('API Response Data:', data);
+      return data;
+    } catch (error) {
+      console.error('API Request Error:', error);
+      throw error;
     }
-
-    return response.json();
   }
 
   async getHealth(): Promise<{ status: string; timestamp: string; version: string; environment: string }> {

@@ -61,11 +61,16 @@ export default function SessionDetailPage() {
 
     const loadTemplate = async () => {
       try {
+        console.log('Loading template: search-basic-v1');
+        
         // 基本検索テンプレートを使用
         const response = await apiService.getTemplate('search-basic-v1');
+        console.log('Template loaded successfully:', response);
+        
         generatePrompt(response.data.template);
       } catch (err) {
-        setError('プロンプトテンプレートの読み込みに失敗しました');
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(`プロンプトテンプレートの読み込みに失敗しました: ${errorMessage}`);
         console.error('Error loading template:', err);
       } finally {
         setIsLoading(false);

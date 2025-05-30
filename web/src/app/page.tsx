@@ -31,10 +31,20 @@ export default function HomePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg text-amber-800">NextPint を読み込み中...</p>
+      <div className="min-h-screen bg-[var(--color-background-primary)] flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="relative">
+            {/* Glowing Background */}
+            <div className="absolute inset-0 rounded-full bg-[var(--color-primary)] opacity-20 animate-pulse-glow"></div>
+            
+            {/* Spinner */}
+            <div className="relative spinner mx-auto mb-6 scale-150"></div>
+          </div>
+          
+          <h1 className="text-2xl font-bold gradient-text mb-2">NextPint</h1>
+          <p className="text-lg text-[var(--color-text-secondary)]">
+            読み込み中...
+          </p>
         </div>
       </div>
     );
