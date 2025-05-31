@@ -5,8 +5,8 @@ compatibility_date = "2024-01-01"
 # D1 Database binding
 [[d1_databases]]
 binding = "DB"
-database_name = "nextpint-db"
-database_id = "6d983f0f-06af-4a55-8b21-611b31ebeb6e"
+database_name = "nextpint-db-secure"
+database_id = "54d1bd50-5672-4c1c-b177-faa647ae3a02"
 
 [env.production]
 name = "nextpint-api"
@@ -14,16 +14,16 @@ name = "nextpint-api"
 
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "nextpint-db"
-database_id = "6d983f0f-06af-4a55-8b21-611b31ebeb6e"
+database_name = "nextpint-db-secure"
+database_id = "54d1bd50-5672-4c1c-b177-faa647ae3a02"
 
 [env.development]
 name = "nextpint-api-dev"
 
 [[env.development.d1_databases]]
 binding = "DB"
-database_name = "nextpint-db"
-database_id = "6d983f0f-06af-4a55-8b21-611b31ebeb6e"
+database_name = "nextpint-db-secure"
+database_id = "54d1bd50-5672-4c1c-b177-faa647ae3a02"
 
 # Environment variables
 [vars]

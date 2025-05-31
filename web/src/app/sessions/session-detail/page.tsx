@@ -1,236 +1,312 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { apiService } from '@/services/api';
-import { PromptTemplate } from '@/types';
+import { Copy, CheckCircle, ArrowLeft } from 'lucide-react';
+import { storageService } from '@/services/storage';
+import type { BeerSearchSession, UserProfile } from '@/types/simple';
+import Navigation from '@/components/Navigation';
 
-export default function SessionDetailPage() {
-  const sessionId = 'session-123';
+function SessionDetailContent() {
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get('id');
   
+  const [session, setSession] = useState<BeerSearchSession | null>(null);
+  const [, setUserProfile] = useState<UserProfile | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [isLoading, setIsLoading] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState(false);
-
-  const getBudgetText = useCallback((budget: string): string => {
-    const budgetMap: Record<string, string> = {
-      low: '〜500円',
-      medium: '500〜1000円',
-      high: '1000円〜',
-      premium: '価格は気にしない',
-    };
-    return budgetMap[budget] || '指定なし';
-  }, []);
-
-  // セッション情報（実際はstorageから取得）
-  const sessionData = useMemo(() => ({
-    id: sessionId,
-    goal: '友人とのパーティー用のビールを探したい',
-    location: '東京都内',
-    budget: 'medium',
-    tastePreferences: 'ホップの効いたIPA、フルーティーな味わい',
-    avoidList: '強い苦味',
-  }), [sessionId]);
 
   useEffect(() => {
-    const generatePrompt = (template: PromptTemplate) => {
-      setIsGenerating(true);
+    const loadData = async () => {
+      if (!sessionId) return;
       
-      // テンプレート変数を実際の値で置換
-      let prompt = template.template;
-      
-      const variables = {
-        session_goal: sessionData.goal,
-        location: sessionData.location || '指定なし',
-        budget: getBudgetText(sessionData.budget),
-        taste_preferences: sessionData.tastePreferences,
-        avoid_list: sessionData.avoidList || 'なし',
-        user_history_summary: '初回利用のため履歴なし',
-      };
-
-      // 変数を置換
-      Object.entries(variables).forEach(([key, value]) => {
-        prompt = prompt.replace(new RegExp(`{{${key}}}`, 'g'), value);
-      });
-
-      setGeneratedPrompt(prompt);
-      setIsGenerating(false);
-    };
-
-    const loadTemplate = async () => {
       try {
-        console.log('Loading template: search-basic-v1');
+        const [sessionData, profileData] = await Promise.all([
+          storageService.getSession(sessionId),
+          storageService.getUserProfile()
+        ]);
         
-        // 基本検索テンプレートを使用
-        const response = await apiService.getTemplate('search-basic-v1');
-        console.log('Template loaded successfully:', response);
-        
-        generatePrompt(response.data.template);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        setError(`プロンプトテンプレートの読み込みに失敗しました: ${errorMessage}`);
-        console.error('Error loading template:', err);
+        if (sessionData) {
+          setSession(sessionData);
+          generatePrompt(sessionData, profileData);
+        }
+        setUserProfile(profileData);
+      } catch (error) {
+        console.error('Error loading session:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadTemplate();
-  }, [sessionId, sessionData, getBudgetText]);
+    loadData();
+  }, [sessionId]);
 
-  const copyToClipboard = async () => {
+  const generatePrompt = (session: BeerSearchSession, profile: UserProfile) => {
+    const moodMap = {
+      adventurous: '冒険的で新しいスタイルに挑戦したい',
+      stable: '安定志向で好みに近いものを探したい', 
+      relaxed: 'リラックスしてのんびり楽しみたい'
+    };
+
+    const tasteMap = {
+      hoppy: 'ホップの香りと苦味が効いた',
+      malty: '麦芽の甘みとコクがある',
+      balanced: 'バランスの取れた'
+    };
+
+    const prompt = `私は${session.profile.sessionGoal}という目的でビールを探しています。
+
+現在の気分: ${moodMap[session.profile.mood]}
+味の好み: ${tasteMap[session.profile.tastePreference.primary]}ビールが好きです。
+
+制約条件:
+${session.profile.constraints.location ? `- 場所: ${session.profile.constraints.location}` : ''}
+${session.profile.constraints.budget ? `- 予算: ${session.profile.constraints.budget}` : ''}
+${session.profile.constraints.other.length > 0 ? `- その他: ${session.profile.constraints.other.join(', ')}` : ''}
+
+${session.profile.searchKeywords.length > 0 ? `検索キーワード: ${session.profile.searchKeywords.join(', ')}` : ''}
+${session.profile.tastePreference.avoid.length > 0 ? `避けたい要素: ${session.profile.tastePreference.avoid.join(', ')}` : ''}
+
+${profile.favoriteStyles.length > 0 ? `\n過去に楽しんだスタイル: ${profile.favoriteStyles.join(', ')}` : ''}
+
+上記の条件に合うビールを5つ提案してください。それぞれについて以下の情報を含めてください：
+1. ビール名と醸造所
+2. スタイルと特徴
+3. 味のプロフィール
+4. なぜこのビールがおすすめなのか
+5. 入手可能な場所（もしあれば）`;
+
+    setGeneratedPrompt(prompt);
+
+    // Save prompt to session
+    session.results = {
+      prompt,
+      copiedAt: undefined,
+      aiResponse: undefined
+    };
+    storageService.saveSession(session);
+  };
+
+  const copyPrompt = async () => {
     try {
       await navigator.clipboard.writeText(generatedPrompt);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+      setCopyStatus('copied');
+      
+      if (session) {
+        session.results = {
+          ...session.results,
+          prompt: generatedPrompt,
+          copiedAt: new Date().toISOString()
+        };
+        await storageService.saveSession(session);
+      }
+
+      setTimeout(() => setCopyStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg text-amber-800">プロンプトを生成中...</p>
+      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="spinner mx-auto mb-6"></div>
+          <p className="text-lg text-text-secondary">セッション読み込み中...</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (!sessionId || !session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">⚠️</div>
-          <p className="text-lg text-red-600 mb-4">{error}</p>
-          <Link
-            href="/home"
-            className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-          >
-            ホームに戻る
-          </Link>
+      <div className="min-h-screen bg-gradient-dark">
+        <Navigation />
+        <div className="flex items-center justify-center h-[80vh]">
+          <div className="text-center">
+            <p className="text-xl text-text-secondary mb-4">セッションが見つかりません</p>
+            <Link href="/sessions/create" className="btn-primary">
+              新しいセッションを開始
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="min-h-screen bg-gradient-dark">
+      <Navigation />
+      
+      <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <Link 
-            href="/home" 
-            className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-4"
+            href="/sessions/create" 
+            className="inline-flex items-center text-text-secondary hover:text-primary-400 mb-4 transition-colors"
           >
-            ← ホームに戻る
+            <ArrowLeft size={20} className="mr-2" />
+            新しいセッション
           </Link>
-          <h1 className="text-3xl font-bold text-amber-900 mb-2">
-            セッション詳細
-          </h1>
-          <p className="text-amber-700">
-            {sessionData.goal}
+          <h1 className="text-3xl font-bold mb-2 text-gradient">セッション詳細</h1>
+          <p className="text-text-secondary">
+            作成日時: {new Date(session.createdAt).toLocaleString('ja-JP')}
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Session Info */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200">
-            <h2 className="text-xl font-semibold text-amber-900 mb-4">セッション情報</h2>
-            <div className="space-y-3">
+          <div className="glass-card rounded-xl p-6">
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <span className="text-2xl">🎯</span>
+              セッション情報
+            </h2>
+            
+            <div className="space-y-4">
               <div>
-                <span className="font-medium text-amber-800">目的:</span>
-                <p className="text-amber-700 mt-1">{sessionData.goal}</p>
+                <label className="text-sm text-text-tertiary">目的</label>
+                <p className="text-white mt-1">{session.profile.sessionGoal}</p>
               </div>
+              
               <div>
-                <span className="font-medium text-amber-800">場所:</span>
-                <p className="text-amber-700 mt-1">{sessionData.location || '指定なし'}</p>
+                <label className="text-sm text-text-tertiary">気分</label>
+                <p className="text-white mt-1">
+                  {session.profile.mood === 'adventurous' && '冒険的'}
+                  {session.profile.mood === 'stable' && '安定志向'}
+                  {session.profile.mood === 'relaxed' && 'リラックス'}
+                </p>
               </div>
+              
               <div>
-                <span className="font-medium text-amber-800">予算:</span>
-                <p className="text-amber-700 mt-1">{getBudgetText(sessionData.budget)}</p>
+                <label className="text-sm text-text-tertiary">味の好み</label>
+                <p className="text-white mt-1">
+                  {session.profile.tastePreference.primary === 'hoppy' && 'ホッピー'}
+                  {session.profile.tastePreference.primary === 'malty' && 'モルティ'}
+                  {session.profile.tastePreference.primary === 'balanced' && 'バランス'}
+                </p>
               </div>
-              <div>
-                <span className="font-medium text-amber-800">味の好み:</span>
-                <p className="text-amber-700 mt-1">{sessionData.tastePreferences}</p>
-              </div>
-              {sessionData.avoidList && (
+              
+              {session.profile.constraints.location && (
                 <div>
-                  <span className="font-medium text-amber-800">避けたい要素:</span>
-                  <p className="text-amber-700 mt-1">{sessionData.avoidList}</p>
+                  <label className="text-sm text-text-tertiary">場所</label>
+                  <p className="text-white mt-1">{session.profile.constraints.location}</p>
+                </div>
+              )}
+              
+              {session.profile.constraints.budget && (
+                <div>
+                  <label className="text-sm text-text-tertiary">予算</label>
+                  <p className="text-white mt-1">{session.profile.constraints.budget}</p>
+                </div>
+              )}
+              
+              {session.profile.searchKeywords.length > 0 && (
+                <div>
+                  <label className="text-sm text-text-tertiary">キーワード</label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {session.profile.searchKeywords.map((keyword, i) => (
+                      <span key={i} className="px-3 py-1 bg-primary-500/20 rounded-full text-sm">
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
           {/* Generated Prompt */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-amber-900">生成されたプロンプト</h2>
+          <div className="glass-card rounded-xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <span className="text-2xl">✨</span>
+                生成されたプロンプト
+              </h2>
               <button
-                onClick={copyToClipboard}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  copySuccess
-                    ? 'bg-green-500 text-white'
-                    : 'bg-amber-500 text-white hover:bg-amber-600'
-                }`}
+                onClick={copyPrompt}
+                className="btn-primary flex items-center gap-2"
               >
-                {copySuccess ? '✓ コピー済み' : '📋 コピー'}
+                {copyStatus === 'copied' ? (
+                  <>
+                    <CheckCircle size={20} />
+                    コピー済み
+                  </>
+                ) : (
+                  <>
+                    <Copy size={20} />
+                    コピー
+                  </>
+                )}
               </button>
             </div>
             
-            {isGenerating ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 rounded-lg p-4 border">
-                <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
-                  {generatedPrompt}
-                </pre>
-              </div>
+            <div className="bg-background-secondary rounded-lg p-4 max-h-[400px] overflow-y-auto">
+              <pre className="whitespace-pre-wrap text-sm text-gray-300 font-mono">
+                {generatedPrompt}
+              </pre>
+            </div>
+            
+            {session.results?.copiedAt && (
+              <p className="text-sm text-text-tertiary mt-4">
+                最終コピー: {new Date(session.results.copiedAt).toLocaleString('ja-JP')}
+              </p>
             )}
           </div>
         </div>
 
         {/* Usage Instructions */}
-        <div className="mt-8 bg-white rounded-xl shadow-lg p-6 border border-amber-200">
-          <h2 className="text-xl font-semibold text-amber-900 mb-4">使い方</h2>
+        <div className="mt-8 glass-card rounded-xl p-6">
+          <h2 className="text-xl font-semibold mb-6">使い方</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl">📋</span>
+              <div className="w-16 h-16 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Copy size={32} className="text-primary-400" />
               </div>
-              <h3 className="font-medium text-amber-900 mb-2">1. コピー</h3>
-              <p className="text-sm text-amber-700">
-                上のプロンプトをコピーボタンでクリップボードにコピー
+              <h3 className="font-semibold mb-2">1. プロンプトをコピー</h3>
+              <p className="text-sm text-text-secondary">
+                上のボタンでクリップボードにコピー
               </p>
             </div>
+            
             <div className="text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl">🤖</span>
+              <div className="w-16 h-16 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🤖</span>
               </div>
-              <h3 className="font-medium text-amber-900 mb-2">2. AI に質問</h3>
-              <p className="text-sm text-amber-700">
-                ChatGPT、Claude、Gemini などの AI にプロンプトを入力
+              <h3 className="font-semibold mb-2">2. AIに質問</h3>
+              <p className="text-sm text-text-secondary">
+                ChatGPT、Claude、Geminiなどに貼り付け
               </p>
             </div>
+            
             <div className="text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl">🍺</span>
+              <div className="w-16 h-16 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🍺</span>
               </div>
-              <h3 className="font-medium text-amber-900 mb-2">3. ビール発見</h3>
-              <p className="text-sm text-amber-700">
-                AI からの提案を参考にお気に入りのビールを見つけよう
+              <h3 className="font-semibold mb-2">3. ビールを発見</h3>
+              <p className="text-sm text-text-secondary">
+                AIの提案から好みのビールを見つけよう
               </p>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
+  );
+}
+
+export default function SessionDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="spinner mx-auto mb-6"></div>
+          <p className="text-lg text-text-secondary">読み込み中...</p>
+        </div>
+      </div>
+    }>
+      <SessionDetailContent />
+    </Suspense>
   );
 }

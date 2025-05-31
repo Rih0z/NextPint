@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { secureHeaders } from 'hono/secure-headers';
 import { templateRoutes } from './routes/templates';
 import { healthRoutes } from './routes/health';
 
@@ -11,13 +12,25 @@ export type WorkerEnv = {
 
 const app = new Hono<{ Bindings: WorkerEnv }>();
 
-// CORS middleware
+// Security headers
+app.use('*', secureHeaders({
+  xFrameOptions: 'DENY',
+  xContentTypeOptions: 'nosniff',
+  referrerPolicy: 'strict-origin-when-cross-origin',
+  xXssProtection: '1; mode=block',
+}));
+
+// CORS middleware - Allow only specific origins
 app.use('*', cors({
-  origin: '*', // 開発・テスト用に一時的に全てのオリジンを許可
-  allowHeaders: ['Content-Type', 'Accept'],
-  allowMethods: ['GET', 'OPTIONS'],
+  origin: [
+    'https://nextpint-web.pages.dev',
+    'http://localhost:3000',
+    'http://localhost:8081'
+  ],
+  allowHeaders: ['Content-Type', 'Accept', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'OPTIONS'],
   exposeHeaders: [],
-  maxAge: 600,
+  maxAge: 86400,
   credentials: false,
 }));
 
@@ -48,7 +61,10 @@ app.notFound((c) => {
 
 // Error handler
 app.onError((err, c) => {
-  console.error(`Error: ${err.message}`, err);
+  // Only log errors in development
+  if (c.env.ENVIRONMENT === 'development') {
+    console.error(`Error: ${err.message}`, err);
+  }
   
   return c.json({
     status: 'error',

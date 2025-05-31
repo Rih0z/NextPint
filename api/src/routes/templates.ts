@@ -55,7 +55,6 @@ templates.get('/', async (c) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching templates:', error);
     throw error;
   }
 });
@@ -102,7 +101,6 @@ templates.get('/:id', async (c) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching template:', error);
     throw error;
   }
 });

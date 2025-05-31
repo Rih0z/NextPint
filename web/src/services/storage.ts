@@ -1,4 +1,5 @@
-import { UserProfile, ImportedBeer, BeerSearchSession, AppSettings } from '@/types';
+import { UserProfile, ImportedBeer, BeerSearchSession } from '@/types/simple';
+import { AppSettings } from '@/types';
 
 export class StorageService {
   private static instance: StorageService;
@@ -49,8 +50,19 @@ export class StorageService {
   }
 
   // User Profile
-  async getUserProfile(): Promise<UserProfile | null> {
-    return this.getItem<UserProfile>('userProfile');
+  async getUserProfile(): Promise<UserProfile> {
+    const profile = await this.getItem<UserProfile>('userProfile');
+    if (!profile) {
+      // Return default profile
+      return {
+        id: Date.now().toString(),
+        favoriteStyles: [],
+        avoidList: [],
+        totalBeers: 0,
+        lastUpdated: new Date().toISOString()
+      };
+    }
+    return profile;
   }
 
   async saveUserProfile(profile: UserProfile): Promise<void> {

@@ -91,11 +91,29 @@ export default function HomePage() {
           </div>
 
           {/* Quick Actions - Netflix Style Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+            <Link
+              href="/import"
+              className="card-modern p-8 group hover:scale-105 transition-all duration-300 animate-fade-in"
+              style={{ animationDelay: '0.1s' }}
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] rounded-2xl flex items-center justify-center shadow-lg">
+                  <span className="text-3xl">📥</span>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[var(--color-primary)] transition-colors">
+                  インポート
+                </h3>
+                <p className="text-[var(--color-text-secondary)] leading-relaxed">
+                  ビール履歴を取り込む
+                </p>
+              </div>
+            </Link>
+
             <Link
               href="/sessions/create"
               className="card-modern p-8 group hover:scale-105 transition-all duration-300 animate-fade-in"
-              style={{ animationDelay: '0.1s' }}
+              style={{ animationDelay: '0.2s' }}
             >
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] rounded-2xl flex items-center justify-center shadow-lg">
@@ -105,7 +123,7 @@ export default function HomePage() {
                   新しいセッション
                 </h3>
                 <p className="text-[var(--color-text-secondary)] leading-relaxed">
-                  目的に応じたビール検索を開始
+                  ビール検索を開始
                 </p>
               </div>
             </Link>
@@ -113,7 +131,7 @@ export default function HomePage() {
             <Link
               href="/history"
               className="card-modern p-8 group hover:scale-105 transition-all duration-300 animate-fade-in"
-              style={{ animationDelay: '0.2s' }}
+              style={{ animationDelay: '0.3s' }}
             >
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[var(--color-info)] to-[var(--color-primary)] rounded-2xl flex items-center justify-center shadow-lg">
@@ -131,7 +149,7 @@ export default function HomePage() {
             <Link
               href="/settings"
               className="card-modern p-8 group hover:scale-105 transition-all duration-300 animate-fade-in"
-              style={{ animationDelay: '0.3s' }}
+              style={{ animationDelay: '0.4s' }}
             >
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[var(--color-text-tertiary)] to-[var(--color-text-secondary)] rounded-2xl flex items-center justify-center shadow-lg">

@@ -3,14 +3,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { storageService } from '@/services/storage';
+import type { BeerSearchSession } from '@/types/simple';
 
 export default function CreateSessionPage() {
   const router = useRouter();
   const [sessionGoal, setSessionGoal] = useState('');
+  const [mood, setMood] = useState<'adventurous' | 'stable' | 'relaxed'>('stable');
+  const [primary, setPrimary] = useState<'hoppy' | 'malty' | 'balanced'>('balanced');
   const [location, setLocation] = useState('');
   const [budget, setBudget] = useState('');
-  const [tastePreferences, setTastePreferences] = useState('');
+  const [searchKeywords, setSearchKeywords] = useState('');
   const [avoidList, setAvoidList] = useState('');
+  const [otherConstraints, setOtherConstraints] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,19 +23,30 @@ export default function CreateSessionPage() {
     setIsLoading(true);
 
     try {
-      // セッション作成のロジック（今後実装）
-      console.log('Session created:', {
-        sessionGoal,
-        location,
-        budget,
-        tastePreferences,
-        avoidList,
-      });
+      const session: BeerSearchSession = {
+        sessionId: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        profile: {
+          sessionGoal,
+          mood,
+          tastePreference: {
+            primary,
+            avoid: avoidList.split(',').map(s => s.trim()).filter(Boolean)
+          },
+          constraints: {
+            location,
+            budget,
+            other: otherConstraints.split(',').map(s => s.trim()).filter(Boolean)
+          },
+          searchKeywords: searchKeywords.split(',').map(s => s.trim()).filter(Boolean)
+        }
+      };
 
-      // 仮のセッションIDで次のページに遷移
-      router.push('/sessions/session-detail');
+      await storageService.saveSession(session);
+      router.push(`/sessions/session-detail?id=${session.sessionId}`);
     } catch (error) {
       console.error('Error creating session:', error);
+      alert('セッションの作成に失敗しました');
     } finally {
       setIsLoading(false);
     }
@@ -38,10 +54,22 @@ export default function CreateSessionPage() {
 
   const budgetOptions = [
     { value: '', label: '選択してください' },
-    { value: 'low', label: '〜500円' },
-    { value: 'medium', label: '500〜1000円' },
-    { value: 'high', label: '1000円〜' },
-    { value: 'premium', label: '価格は気にしない' },
+    { value: '〜500円', label: '〜500円' },
+    { value: '500〜1000円', label: '500〜1000円' },
+    { value: '1000円〜', label: '1000円〜' },
+    { value: '価格は気にしない', label: '価格は気にしない' },
+  ];
+
+  const moodOptions = [
+    { value: 'adventurous', label: '冒険的', description: '新しいスタイルに挑戦したい' },
+    { value: 'stable', label: '安定志向', description: '好みに近いものを探したい' },
+    { value: 'relaxed', label: 'リラックス', description: 'のんびり楽しみたい' },
+  ];
+
+  const tasteOptions = [
+    { value: 'hoppy', label: 'ホッピー', description: 'ホップの香りと苦味' },
+    { value: 'malty', label: 'モルティ', description: '麦芽の甘みとコク' },
+    { value: 'balanced', label: 'バランス', description: '調和のとれた味わい' },
   ];
 
   return (
@@ -77,10 +105,34 @@ export default function CreateSessionPage() {
                 id="sessionGoal"
                 value={sessionGoal}
                 onChange={(e) => setSessionGoal(e.target.value)}
-                placeholder="例: 友人とのパーティー用のビールを探したい"
+                placeholder="例: 新しいスタイルを試したい、友人とのパーティー用"
                 className="w-full px-6 py-4 bg-[var(--color-background-tertiary)] border border-[var(--color-border)] rounded-xl text-white placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-opacity-20 transition-all"
                 required
               />
+            </div>
+
+            {/* Mood */}
+            <div className="mb-8">
+              <label className="block text-lg font-semibold text-white mb-4">
+                今の気分 *
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {moodOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setMood(option.value as 'adventurous' | 'stable' | 'relaxed')}
+                    className={`p-4 rounded-xl border-2 transition-all ${
+                      mood === option.value
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/20'
+                        : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
+                    }`}
+                  >
+                    <div className="text-lg font-semibold mb-1">{option.label}</div>
+                    <div className="text-sm text-[var(--color-text-secondary)]">{option.description}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Location */}
@@ -123,32 +175,70 @@ export default function CreateSessionPage() {
 
             {/* Taste Preferences */}
             <div className="mb-8">
-              <label htmlFor="tastePreferences" className="block text-lg font-semibold text-white mb-4">
+              <label className="block text-lg font-semibold text-white mb-4">
                 味の好み *
               </label>
-              <textarea
-                id="tastePreferences"
-                value={tastePreferences}
-                onChange={(e) => setTastePreferences(e.target.value)}
-                placeholder="例: ホップの効いたIPA、フルーティーな味わい、苦味が少ない"
-                rows={4}
-                className="w-full px-6 py-4 bg-[var(--color-background-tertiary)] border border-[var(--color-border)] rounded-xl text-white placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-opacity-20 transition-all resize-none"
-                required
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {tasteOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setPrimary(option.value as 'hoppy' | 'malty' | 'balanced')}
+                    className={`p-4 rounded-xl border-2 transition-all ${
+                      primary === option.value
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/20'
+                        : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
+                    }`}
+                  >
+                    <div className="text-lg font-semibold mb-1">{option.label}</div>
+                    <div className="text-sm text-[var(--color-text-secondary)]">{option.description}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search Keywords */}
+            <div className="mb-8">
+              <label htmlFor="searchKeywords" className="block text-lg font-semibold text-white mb-4">
+                検索キーワード
+              </label>
+              <input
+                type="text"
+                id="searchKeywords"
+                value={searchKeywords}
+                onChange={(e) => setSearchKeywords(e.target.value)}
+                placeholder="例: IPA, 地元産, 限定, クラフト（カンマ区切り）"
+                className="w-full px-6 py-4 bg-[var(--color-background-tertiary)] border border-[var(--color-border)] rounded-xl text-white placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-opacity-20 transition-all"
               />
             </div>
 
             {/* Avoid List */}
-            <div>
+            <div className="mb-8">
               <label htmlFor="avoidList" className="block text-lg font-semibold text-white mb-4">
                 避けたい要素
               </label>
-              <textarea
+              <input
+                type="text"
                 id="avoidList"
                 value={avoidList}
                 onChange={(e) => setAvoidList(e.target.value)}
-                placeholder="例: 強い苦味、酸味、高アルコール度数"
-                rows={3}
-                className="w-full px-6 py-4 bg-[var(--color-background-tertiary)] border border-[var(--color-border)] rounded-xl text-white placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-opacity-20 transition-all resize-none"
+                placeholder="例: 酸味, スモーキー, 高アルコール（カンマ区切り）"
+                className="w-full px-6 py-4 bg-[var(--color-background-tertiary)] border border-[var(--color-border)] rounded-xl text-white placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-opacity-20 transition-all"
+              />
+            </div>
+
+            {/* Other Constraints */}
+            <div>
+              <label htmlFor="otherConstraints" className="block text-lg font-semibold text-white mb-4">
+                その他の制約
+              </label>
+              <input
+                type="text"
+                id="otherConstraints"
+                value={otherConstraints}
+                onChange={(e) => setOtherConstraints(e.target.value)}
+                placeholder="例: 飛行機持ち込み可能, 缶ビールのみ（カンマ区切り）"
+                className="w-full px-6 py-4 bg-[var(--color-background-tertiary)] border border-[var(--color-border)] rounded-xl text-white placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-opacity-20 transition-all"
               />
             </div>
           </div>
@@ -163,7 +253,7 @@ export default function CreateSessionPage() {
             </Link>
             <button
               type="submit"
-              disabled={!sessionGoal || !tastePreferences || isLoading}
+              disabled={!sessionGoal || isLoading}
               className="button-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
             >
               {isLoading && <div className="spinner scale-75" />}
@@ -183,8 +273,8 @@ export default function CreateSessionPage() {
                 <span>目的の入力（必須）</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className={`w-2 h-2 rounded-full ${tastePreferences ? 'bg-[var(--color-success)]' : 'bg-[var(--color-border)]'}`}></span>
-                <span>味の好みの入力（必須）</span>
+                <span className="w-2 h-2 rounded-full bg-[var(--color-success)]"></span>
+                <span>気分と味の好みの選択（必須）</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-[var(--color-info)]"></span>
