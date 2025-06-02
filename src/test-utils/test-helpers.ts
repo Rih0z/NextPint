@@ -1,4 +1,4 @@
-import { ImportedBeer, BeerSearchSession, UserProfile, AppSettings } from '@/types';
+import { ImportedBeer, BeerSearchSession, UserProfile, AppSettings, ImportSource } from '@/types';
 
 export const mockImportedBeer: ImportedBeer = {
   id: 'beer-123',
@@ -8,13 +8,10 @@ export const mockImportedBeer: ImportedBeer = {
   abv: 6.5,
   ibu: 65,
   rating: 4.2,
-  reviewCount: 100,
-  drankAt: new Date('2024-01-01'),
   venue: 'Test Pub',
   notes: 'Great beer',
-  source: 'untappd',
+  source: ImportSource.UNTAPPD,
   tags: ['craft', 'hoppy'],
-  originalData: {},
   importedAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01')
 };
@@ -35,8 +32,8 @@ export const mockBeerSearchSession: BeerSearchSession = {
       intensity: 4
     },
     constraints: {
-      maxABV: 8,
-      priceRange: { min: 5, max: 15, currency: 'USD' },
+      location: 'Tokyo',
+      budget: '5000-15000円',
       other: []
     },
     searchKeywords: ['IPA', 'hoppy']

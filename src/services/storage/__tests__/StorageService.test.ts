@@ -62,7 +62,7 @@ describe('StorageService', () => {
 
     it('should handle SSR (no window)', async () => {
       const windowBackup = global.window;
-      // @ts-ignore
+      // @ts-expect-error
       delete global.window;
       
       await expect(StorageService.setItem('ssr', 'data')).resolves.not.toThrow();
@@ -112,7 +112,7 @@ describe('StorageService', () => {
 
     it('should handle SSR (no window)', async () => {
       const windowBackup = global.window;
-      // @ts-ignore
+      // @ts-expect-error
       delete global.window;
       
       const result = await StorageService.getItem('ssr');
@@ -142,7 +142,7 @@ describe('StorageService', () => {
 
     it('should handle SSR', async () => {
       const windowBackup = global.window;
-      // @ts-ignore
+      // @ts-expect-error
       delete global.window;
       
       await expect(StorageService.removeItem('ssr')).resolves.not.toThrow();
@@ -171,7 +171,7 @@ describe('StorageService', () => {
 
     it('should handle SSR', async () => {
       const windowBackup = global.window;
-      // @ts-ignore
+      // @ts-expect-error
       delete global.window;
       
       await expect(StorageService.clear()).resolves.not.toThrow();
@@ -212,7 +212,7 @@ describe('StorageService', () => {
 
     it('should handle SSR', async () => {
       const windowBackup = global.window;
-      // @ts-ignore
+      // @ts-expect-error
       delete global.window;
       
       const keys = await StorageService.getAllKeys();
@@ -261,7 +261,7 @@ describe('StorageService', () => {
 
     it('should handle SSR', async () => {
       const windowBackup = global.window;
-      // @ts-ignore
+      // @ts-expect-error
       delete global.window;
       
       const size = await StorageService.getStorageSize();

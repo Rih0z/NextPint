@@ -24,9 +24,9 @@ import {
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { ServiceFactory } from '@/application/factories/ServiceFactory';
-import { PromptTemplate } from '@/services/prompt/PromptService';
+import { PromptTemplate, PromptCategory } from '@/types';
 
-type CategoryFilter = 'all' | 'discovery' | 'analysis' | 'exploration' | 'pairing';
+type CategoryFilter = 'all' | PromptCategory.SEARCH | PromptCategory.ANALYSIS | PromptCategory.COMPARISON | PromptCategory.IMPORT;
 
 export default function PromptsPage() {
   const { t } = useTranslation();
@@ -145,7 +145,7 @@ export default function PromptsPage() {
         return (
           template.name.toLowerCase().includes(searchLower) ||
           template.description.toLowerCase().includes(searchLower) ||
-          template.variables.some(v => v.toLowerCase().includes(searchLower))
+          template.variables.some(v => v.name.toLowerCase().includes(searchLower))
         );
       }
       
@@ -172,51 +172,51 @@ export default function PromptsPage() {
       description: '全てのプロンプトテンプレート'
     },
     { 
-      value: 'discovery', 
+      value: PromptCategory.SEARCH, 
       label: 'ビール発見', 
       icon: Target, 
-      count: templates.filter(t => t.category === 'discovery').length,
+      count: templates.filter(t => t.category === PromptCategory.SEARCH).length,
       description: '新しいビールを発見するためのプロンプト'
     },
     { 
-      value: 'analysis', 
+      value: PromptCategory.ANALYSIS, 
       label: '分析', 
       icon: BarChart3, 
-      count: templates.filter(t => t.category === 'analysis').length,
+      count: templates.filter(t => t.category === PromptCategory.ANALYSIS).length,
       description: 'あなたの好みを分析するプロンプト'
     },
     { 
-      value: 'exploration', 
-      label: '探求', 
+      value: PromptCategory.COMPARISON, 
+      label: '比較', 
       icon: Search, 
-      count: templates.filter(t => t.category === 'exploration').length,
-      description: 'ブルワリーやスタイルを深く知るプロンプト'
+      count: templates.filter(t => t.category === PromptCategory.COMPARISON).length,
+      description: 'ビールを比較するプロンプト'
     },
     { 
-      value: 'pairing', 
-      label: 'ペアリング', 
+      value: PromptCategory.IMPORT, 
+      label: 'インポート', 
       icon: Coffee, 
-      count: templates.filter(t => t.category === 'pairing').length,
-      description: 'フードペアリングのプロンプト'
+      count: templates.filter(t => t.category === PromptCategory.IMPORT).length,
+      description: 'データインポートのプロンプト'
     }
   ];
 
-  const getCategoryIcon = (category: string) => {
-    const categoryMap: Record<string, any> = {
-      discovery: Target,
-      analysis: BarChart3,
-      exploration: Search,
-      pairing: Coffee
+  const getCategoryIcon = (category: PromptCategory) => {
+    const categoryMap: Record<PromptCategory, any> = {
+      [PromptCategory.SEARCH]: Target,
+      [PromptCategory.ANALYSIS]: BarChart3,
+      [PromptCategory.COMPARISON]: Search,
+      [PromptCategory.IMPORT]: Coffee
     };
     return categoryMap[category] || Sparkles;
   };
 
-  const getCategoryColor = (category: string) => {
-    const colorMap: Record<string, string> = {
-      discovery: 'text-green-400 bg-green-500/20',
-      analysis: 'text-blue-400 bg-blue-500/20',
-      exploration: 'text-purple-400 bg-purple-500/20',
-      pairing: 'text-orange-400 bg-orange-500/20'
+  const getCategoryColor = (category: PromptCategory) => {
+    const colorMap: Record<PromptCategory, string> = {
+      [PromptCategory.SEARCH]: 'text-green-400 bg-green-500/20',
+      [PromptCategory.ANALYSIS]: 'text-blue-400 bg-blue-500/20',
+      [PromptCategory.COMPARISON]: 'text-purple-400 bg-purple-500/20',
+      [PromptCategory.IMPORT]: 'text-orange-400 bg-orange-500/20'
     };
     return colorMap[category] || 'text-primary-400 bg-primary-500/20';
   };
@@ -359,10 +359,10 @@ export default function PromptsPage() {
                       <div className="flex flex-wrap gap-1">
                         {template.variables.slice(0, 4).map((variable) => (
                           <span 
-                            key={variable}
+                            key={variable.name}
                             className="px-2 py-1 bg-background-secondary rounded text-xs text-text-tertiary"
                           >
-                            {variable}
+                            {variable.name}
                           </span>
                         ))}
                         {template.variables.length > 4 && (
@@ -378,7 +378,7 @@ export default function PromptsPage() {
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-text-secondary mb-2">対応AI:</h4>
                     <div className="flex gap-2">
-                      {template.aiCompatibility.map((ai) => (
+                      {template.metadata.supportedAI.map((ai) => (
                         <span 
                           key={ai}
                           className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs"

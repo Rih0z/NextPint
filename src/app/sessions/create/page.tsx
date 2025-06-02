@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { ServiceFactory } from '@/application/factories/ServiceFactory';
-import { SessionProfile } from '@/services/prompt/PromptService';
+import { SessionProfile } from '@/types';
 
 interface FormData {
   sessionGoal: string;
@@ -108,12 +108,13 @@ export default function CreateSessionPage() {
         mood: formData.mood,
         tastePreference: {
           primary: formData.primaryTaste,
-          avoid: formData.avoidTastes
+          avoid: formData.avoidTastes,
+          intensity: 3
         },
         constraints: {
           location: formData.location || undefined,
           budget: formData.budget || undefined,
-          other: formData.constraints.length > 0 ? formData.constraints : undefined
+          other: formData.constraints
         },
         searchKeywords: formData.keywords
       };

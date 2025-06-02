@@ -299,7 +299,7 @@ describe('AnalyticsService', () => {
   describe('SSR compatibility', () => {
     it('should handle missing window object', () => {
       const windowBackup = global.window;
-      // @ts-ignore
+      // @ts-expect-error
       delete global.window;
       
       expect(() => new AnalyticsService()).not.toThrow();
