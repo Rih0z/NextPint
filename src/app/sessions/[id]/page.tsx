@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
+// Cloudflare Pages対応
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { 
