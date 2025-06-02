@@ -92,5 +92,9 @@ logs
 !.vscode/settings.json
 .idea/
 
+# Next.js
+.next/
+out/
+
 # Misc
 .cache/

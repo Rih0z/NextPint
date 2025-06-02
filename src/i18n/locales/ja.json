@@ -1,0 +1,29 @@
+{
+  "app": {
+    "name": "NextPint"
+  },
+  "navigation": {
+    "home": "ホーム",
+    "import": "インポート",
+    "search": "検索",
+    "sessions": "セッション",
+    "prompts": "プロンプト",
+    "analytics": "分析",
+    "history": "履歴",
+    "settings": "設定"
+  },
+  "home": {
+    "welcome": "NextPintへようこそ",
+    "subtitle": "AIを活用してあなたにぴったりのビールを発見しましょう",
+    "quickActions": {
+      "newSearch": "ビール検索",
+      "newSearchDesc": "新しいビールを見つけよう",
+      "import": "履歴インポート",
+      "importDesc": "ビール履歴を追加",
+      "prompts": "プロンプト",
+      "promptsDesc": "テンプレート集",
+      "analytics": "分析",
+      "analyticsDesc": "好みの傾向を見る"
+    }
+  }
+}

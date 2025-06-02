@@ -1,6 +1,6 @@
 import {useState, useEffect} from 'react';
-import {AppSettings} from '@types';
-import {SettingsService} from '@services/storage';
+import {AppSettings} from '@/types';
+import {SettingsService} from '@/services/storage/SettingsService';
 
 export const useAppSettings = () => {
   const [settings, setSettings] = useState<AppSettings | null>(null);

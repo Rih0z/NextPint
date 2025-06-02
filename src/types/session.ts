@@ -1,3 +1,5 @@
+import { GeneratedPrompt } from './prompt';
+
 export interface BeerSearchSession {
   sessionId: string;
   userId: string;

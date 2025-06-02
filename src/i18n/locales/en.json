@@ -1,0 +1,29 @@
+{
+  "app": {
+    "name": "NextPint"
+  },
+  "navigation": {
+    "home": "Home",
+    "import": "Import",
+    "search": "Search",
+    "sessions": "Sessions",
+    "prompts": "Prompts",
+    "analytics": "Analytics",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "home": {
+    "welcome": "Welcome to NextPint",
+    "subtitle": "Discover your perfect beer with AI assistance",
+    "quickActions": {
+      "newSearch": "Beer Search",
+      "newSearchDesc": "Find new beers",
+      "import": "Import History",
+      "importDesc": "Add beer history",
+      "prompts": "Prompts",
+      "promptsDesc": "Template collection",
+      "analytics": "Analytics",
+      "analyticsDesc": "View preferences"
+    }
+  }
+}

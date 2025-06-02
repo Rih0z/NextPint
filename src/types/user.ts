@@ -1,3 +1,6 @@
+import { ImportedBeer } from './beer';
+import { BeerSearchSession } from './session';
+
 export interface UserProfile {
   id: string;
   version: string;

@@ -1,5 +1,5 @@
 import {v4 as uuidv4} from 'uuid';
-import {UserProfile, UserPreferences, ValidationResult} from '@types';
+import {UserProfile, UserPreferences, ValidationResult} from '@/types';
 import {StorageService} from './StorageService';
 
 export class UserProfileService {

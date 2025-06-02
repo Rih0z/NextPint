@@ -1,5 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {ValidationResult} from '@types/storage';
+import {ValidationResult} from '@/types/storage';
 
 export class StorageService {
   private static readonly STORAGE_KEYS = {
@@ -12,8 +11,9 @@ export class StorageService {
 
   static async setItem<T>(key: string, value: T): Promise<void> {
     try {
+      if (typeof window === 'undefined') return; // SSR guard
       const jsonValue = JSON.stringify(value);
-      await AsyncStorage.setItem(key, jsonValue);
+      localStorage.setItem(key, jsonValue);
     } catch (error) {
       console.error(`Error saving data for key ${key}:`, error);
       throw new Error(`Failed to save data: ${error}`);
@@ -22,7 +22,8 @@ export class StorageService {
 
   static async getItem<T>(key: string): Promise<T | null> {
     try {
-      const jsonValue = await AsyncStorage.getItem(key);
+      if (typeof window === 'undefined') return null; // SSR guard
+      const jsonValue = localStorage.getItem(key);
       return jsonValue != null ? JSON.parse(jsonValue) : null;
     } catch (error) {
       console.error(`Error retrieving data for key ${key}:`, error);
@@ -32,7 +33,8 @@ export class StorageService {
 
   static async removeItem(key: string): Promise<void> {
     try {
-      await AsyncStorage.removeItem(key);
+      if (typeof window === 'undefined') return; // SSR guard
+      localStorage.removeItem(key);
     } catch (error) {
       console.error(`Error removing data for key ${key}:`, error);
       throw new Error(`Failed to remove data: ${error}`);
@@ -41,7 +43,8 @@ export class StorageService {
 
   static async clear(): Promise<void> {
     try {
-      await AsyncStorage.clear();
+      if (typeof window === 'undefined') return; // SSR guard
+      localStorage.clear();
     } catch (error) {
       console.error('Error clearing storage:', error);
       throw new Error(`Failed to clear storage: ${error}`);
@@ -50,7 +53,8 @@ export class StorageService {
 
   static async getAllKeys(): Promise<string[]> {
     try {
-      return await AsyncStorage.getAllKeys();
+      if (typeof window === 'undefined') return []; // SSR guard
+      return Object.keys(localStorage);
     } catch (error) {
       console.error('Error getting all keys:', error);
       return [];
@@ -59,11 +63,12 @@ export class StorageService {
 
   static async getStorageSize(): Promise<{usedSize: number; totalSize: number}> {
     try {
+      if (typeof window === 'undefined') return {usedSize: 0, totalSize: 0}; // SSR guard
       const keys = await this.getAllKeys();
       let usedSize = 0;
 
       for (const key of keys) {
-        const value = await AsyncStorage.getItem(key);
+        const value = localStorage.getItem(key);
         if (value) {
           usedSize += new Blob([value]).size;
         }
@@ -71,7 +76,7 @@ export class StorageService {
 
       return {
         usedSize,
-        totalSize: 10 * 1024 * 1024, // 10MB typical limit
+        totalSize: 5 * 1024 * 1024, // 5MB localStorage typical limit
       };
     } catch (error) {
       console.error('Error calculating storage size:', error);
@@ -91,6 +96,6 @@ export class StorageService {
   }
 
   static getStorageKeys() {
-    return this.STORAGE_KEYS;
+    return Object.freeze({ ...this.STORAGE_KEYS });
   }
 }

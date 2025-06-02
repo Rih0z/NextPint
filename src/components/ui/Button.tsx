@@ -41,7 +41,7 @@ export const Button: React.FC<ButtonProps> = ({
   ];
 
   const buttonTextStyle = [
-    styles.text,
+    styles.textBase,
     styles[`${variant}Text`],
     styles[`${size}Text`],
     isDisabled && styles.disabledText,
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   },
 
   // Text styles
-  text: {
+  textBase: {
     fontWeight: TYPOGRAPHY.weights.medium,
   },
   primaryText: {

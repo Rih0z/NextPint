@@ -1,6 +1,3 @@
-export * from './Button';
-export * from './Text';
-export * from './Card';
-export * from './Input';
-export * from './LoadingSpinner';
-export * from './EmptyState';
+// React Native components not compatible with Next.js
+// These components are kept for React Native mobile app development
+// but are not exported for web use

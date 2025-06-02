@@ -1,5 +1,5 @@
 import {v4 as uuidv4} from 'uuid';
-import {ImportedBeer, BeerFilter, ImportSource, ValidationResult} from '@types';
+import {ImportedBeer, BeerFilter, ImportSource, ValidationResult} from '@/types';
 import {StorageService} from './StorageService';
 
 export class BeerHistoryService {

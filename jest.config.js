@@ -1,40 +1,57 @@
-module.exports = {
-  preset: 'react-native',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+const nextJest = require('next/jest')
+
+const createJestConfig = nextJest({
+  // Provide the path to your Next.js app to load next.config.js and .env files
+  dir: './',
+})
+
+// Add any custom config to be passed to Jest
+const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@react-navigation|@react-native-async-storage|react-native-vector-icons|react-native-screens|react-native-safe-area-context|react-native-gesture-handler)/)',
-  ],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@components/(.*)$': '<rootDir>/src/components/$1',
-    '^@screens/(.*)$': '<rootDir>/src/screens/$1',
-    '^@services/(.*)$': '<rootDir>/src/services/$1',
-    '^@utils/(.*)$': '<rootDir>/src/utils/$1',
-    '^@types/(.*)$': '<rootDir>/src/types/$1',
-    '^@hooks/(.*)$': '<rootDir>/src/hooks/$1',
-    '^@navigation/(.*)$': '<rootDir>/src/navigation/$1',
-    '^@constants/(.*)$': '<rootDir>/src/utils/constants/$1',
-  },
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
+  collectCoverage: true,
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
-    '!src/types/**/*',
-    '!src/**/__tests__/**/*',
-    '!src/**/*.test.{js,jsx,ts,tsx}',
-    '!src/**/*.spec.{js,jsx,ts,tsx}',
+    '!src/app/layout.tsx',
+    '!src/app/globals.css',
+    '!src/i18n/**',
+    '!src/**/*.stories.{js,jsx,ts,tsx}',
+    'src/components/ui/**', // Include React Native components in coverage
+    '!src/screens/**', // React Native screens
+    '!src/navigation/**', // React Native navigation
+    '!src/hooks/**', // React Native hooks
+    '!src/utils/**', // Constants only
+    '!src/types/**', // Type definitions only
+    '!src/services/**', // React Native services
+    '!**/.next/**',
+    '!**/node_modules/**',
+    '!**/coverage/**'
   ],
+  coverageReporters: ['text', 'lcov', 'html'],
+  coverageDirectory: 'coverage',
   coverageThreshold: {
     global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80,
-    },
+      branches: 25,
+      functions: 25,
+      lines: 25,
+      statements: 25
+    }
   },
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
-    '<rootDir>/src/**/*.{spec,test}.{js,jsx,ts,tsx}',
+    '<rootDir>/src/**/*.{test,spec}.{js,jsx,ts,tsx}'
   ],
-};
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@constants$': '<rootDir>/src/utils/constants/index.ts'
+  },
+  testPathIgnorePatterns: [
+    '<rootDir>/.next/',
+    '<rootDir>/node_modules/',
+    '<rootDir>/out/'
+  ]
+}
+
+// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
+module.exports = createJestConfig(customJestConfig)

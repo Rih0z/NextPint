@@ -1,5 +1,5 @@
 import {v4 as uuidv4} from 'uuid';
-import {BeerSearchSession, SessionStatus, SessionFilter, ValidationResult} from '@types';
+import {BeerSearchSession, SessionStatus, SessionFilter, ValidationResult} from '@/types';
 import {StorageService} from './StorageService';
 
 export class SessionService {

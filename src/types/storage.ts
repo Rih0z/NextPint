@@ -1,3 +1,7 @@
+import { UserProfile } from './user';
+import { ImportedBeer } from './beer';
+import { BeerSearchSession } from './session';
+
 export interface AppSettings {
   version: string;
   firstLaunch: Date;

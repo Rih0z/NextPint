@@ -1,6 +1,6 @@
 import {useState, useEffect} from 'react';
-import {UserProfile, UserPreferences} from '@types';
-import {UserProfileService} from '@services/storage';
+import {UserProfile, UserPreferences} from '@/types';
+import {UserProfileService} from '@/services/storage/UserProfileService';
 
 export const useUserProfile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);

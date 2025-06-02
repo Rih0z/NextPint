@@ -1,284 +1,452 @@
-import {BeerHistoryService} from '../BeerHistoryService';
-import {StorageService} from '../StorageService';
-import {ImportedBeer, ImportSource} from '@types';
+import { BeerHistoryService } from '../BeerHistoryService';
+import { StorageService } from '../StorageService';
+import { ImportedBeer, BeerFilter } from '@/types';
+import { mockImportedBeer } from '@/test-utils/test-helpers';
 
-jest.mock('../StorageService');
+// Mock StorageService
+jest.mock('../StorageService', () => ({
+  StorageService: {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    getStorageKeys: jest.fn(() => ({
+      IMPORTED_BEERS: 'imported_beers',
+      USER_PROFILE: 'user_profile',
+      SEARCH_SESSIONS: 'search_sessions',
+      PROMPT_TEMPLATES_CACHE: 'prompt_templates_cache',
+      APP_SETTINGS: 'app_settings'
+    }))
+  }
+}));
 
 describe('BeerHistoryService', () => {
-  const mockBeer: Omit<ImportedBeer, 'id' | 'importedAt'> = {
-    name: 'Test IPA',
-    brewery: 'Test Brewery',
-    style: 'IPA',
-    rating: 4.5,
-    abv: 6.5,
-    ibu: 65,
-    source: ImportSource.UNTAPPD,
-    tags: ['hoppy', 'citrus'],
-    updatedAt: new Date('2024-01-01'),
-  };
+  const mockStorageService = StorageService as jest.Mocked<typeof StorageService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (StorageService.getItem as jest.Mock).mockResolvedValue([]);
+    mockStorageService.getItem.mockResolvedValue([]);
+  });
+
+  describe('getImportedBeers', () => {
+    it('should return empty array when no beers exist', async () => {
+      mockStorageService.getItem.mockResolvedValueOnce(null);
+      
+      const beers = await BeerHistoryService.getImportedBeers();
+      expect(beers).toEqual([]);
+      expect(mockStorageService.getItem).toHaveBeenCalledWith('imported_beers');
+    });
+
+    it('should return stored beers', async () => {
+      const storedBeers = [mockImportedBeer];
+      mockStorageService.getItem.mockResolvedValueOnce(storedBeers);
+      
+      const beers = await BeerHistoryService.getImportedBeers();
+      expect(beers).toEqual(storedBeers);
+    });
   });
 
   describe('addImportedBeer', () => {
-    it('should add a new beer with generated id and timestamp', async () => {
-      (StorageService.setItem as jest.Mock).mockResolvedValue(undefined);
+    it('should add a new beer with generated id and timestamps', async () => {
+      const beerData = {
+        name: 'New Beer',
+        brewery: 'New Brewery',
+        style: 'Lager',
+        abv: 5,
+        rating: 4.0,
+        tags: ['light', 'crisp'],
+        source: 'untappd' as const,
+        originalData: {}
+      };
 
-      const result = await BeerHistoryService.addImportedBeer(mockBeer);
-
-      expect(result).toMatchObject({
-        ...mockBeer,
-        id: expect.any(String),
-        importedAt: expect.any(Date),
-      });
-
-      expect(StorageService.setItem).toHaveBeenCalledWith(
+      const result = await BeerHistoryService.addImportedBeer(beerData);
+      
+      expect(result.id).toBeDefined();
+      expect(result.importedAt).toBeInstanceOf(Date);
+      expect(result.updatedAt).toBeInstanceOf(Date);
+      expect(result.name).toBe(beerData.name);
+      
+      expect(mockStorageService.setItem).toHaveBeenCalledWith(
         'imported_beers',
-        expect.arrayContaining([
-          expect.objectContaining({
-            ...mockBeer,
-            id: expect.any(String),
-          }),
-        ])
+        expect.arrayContaining([expect.objectContaining(beerData)])
       );
     });
 
-    it('should validate beer data before adding', async () => {
-      const invalidBeer = {...mockBeer, name: ''};
+    it('should validate beer data before saving', async () => {
+      const invalidBeer = {
+        // Missing required fields
+        brewery: 'Test',
+        source: 'untappd' as const,
+        originalData: {}
+      };
 
-      await expect(
-        BeerHistoryService.addImportedBeer(invalidBeer)
-      ).rejects.toThrow('Invalid beer data: Beer name is required');
+      await expect(BeerHistoryService.addImportedBeer(invalidBeer as any))
+        .rejects.toThrow('Invalid beer data');
     });
 
-    it('should validate rating range', async () => {
-      const invalidBeer = {...mockBeer, rating: 6};
+    it('should append to existing beers', async () => {
+      const existingBeer = mockImportedBeer;
+      mockStorageService.getItem.mockResolvedValueOnce([existingBeer]);
+      
+      const newBeer = {
+        name: 'Another Beer',
+        brewery: 'Another Brewery',
+        style: 'Stout',
+        abv: 7,
+        rating: 4.5,
+        tags: ['dark', 'roasted'],
+        source: 'ratebeer' as const,
+        originalData: {}
+      };
 
-      await expect(
-        BeerHistoryService.addImportedBeer(invalidBeer)
-      ).rejects.toThrow('Rating must be a number between 0 and 5');
+      await BeerHistoryService.addImportedBeer(newBeer);
+      
+      expect(mockStorageService.setItem).toHaveBeenCalledWith(
+        'imported_beers',
+        expect.arrayContaining([
+          existingBeer,
+          expect.objectContaining(newBeer)
+        ])
+      );
     });
   });
 
   describe('addImportedBeers', () => {
     it('should add multiple beers at once', async () => {
-      const beers = [
-        mockBeer,
-        {...mockBeer, name: 'Test Stout', style: 'Stout', rating: 4.2},
+      const beersData = [
+        {
+          name: 'Beer 1',
+          brewery: 'Brewery 1',
+          style: 'IPA',
+          abv: 6,
+          rating: 4.2,
+          tags: ['hoppy'],
+          source: 'untappd' as const,
+          originalData: {}
+        },
+        {
+          name: 'Beer 2',
+          brewery: 'Brewery 2',
+          style: 'Porter',
+          abv: 5.5,
+          rating: 4.0,
+          tags: ['smooth'],
+          source: 'ratebeer' as const,
+          originalData: {}
+        }
       ];
 
-      const result = await BeerHistoryService.addImportedBeers(beers);
-
+      const result = await BeerHistoryService.addImportedBeers(beersData);
+      
       expect(result).toHaveLength(2);
-      expect(result[0]).toMatchObject({name: 'Test IPA'});
-      expect(result[1]).toMatchObject({name: 'Test Stout'});
+      expect(result[0].name).toBe('Beer 1');
+      expect(result[1].name).toBe('Beer 2');
+      
+      // All should have unique IDs
+      const ids = result.map(b => b.id);
+      expect(new Set(ids).size).toBe(2);
     });
 
-    it('should validate all beers before adding', async () => {
-      const beers = [
-        mockBeer,
-        {...mockBeer, brewery: ''}, // Invalid
+    it('should validate all beers before saving', async () => {
+      const beersData = [
+        {
+          name: 'Valid Beer',
+          brewery: 'Brewery',
+          style: 'IPA',
+          abv: 6,
+          rating: 4.0,
+          tags: ['craft'],
+          source: 'untappd' as const,
+          originalData: {}
+        },
+        {
+          // Invalid - missing name, style, rating, tags
+          brewery: 'Brewery',
+          source: 'ratebeer' as const,
+          originalData: {}
+        }
       ];
 
-      await expect(
-        BeerHistoryService.addImportedBeers(beers)
-      ).rejects.toThrow('Brewery name is required');
+      await expect(BeerHistoryService.addImportedBeers(beersData as any))
+        .rejects.toThrow('Invalid beer data');
+      
+      // Should not save any beers if validation fails
+      expect(mockStorageService.setItem).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateImportedBeer', () => {
+    it('should update existing beer', async () => {
+      const existingBeer = { ...mockImportedBeer, id: 'beer-123' };
+      mockStorageService.getItem.mockResolvedValueOnce([existingBeer]);
+      
+      const updates = { rating: 4.5, notes: 'Updated notes' };
+      await BeerHistoryService.updateImportedBeer('beer-123', updates);
+      
+      expect(mockStorageService.setItem).toHaveBeenCalledWith(
+        'imported_beers',
+        expect.arrayContaining([
+          expect.objectContaining({
+            ...existingBeer,
+            ...updates,
+            updatedAt: expect.any(Date)
+          })
+        ])
+      );
+    });
+
+    it('should throw error if beer not found', async () => {
+      mockStorageService.getItem.mockResolvedValueOnce([]);
+      
+      await expect(BeerHistoryService.updateImportedBeer('non-existent', {}))
+        .rejects.toThrow('Beer with id non-existent not found');
+    });
+
+    it('should validate updated beer data', async () => {
+      const existingBeer = mockImportedBeer;
+      mockStorageService.getItem.mockResolvedValueOnce([existingBeer]);
+      
+      // Try to set invalid ABV
+      await expect(BeerHistoryService.updateImportedBeer(existingBeer.id, { abv: -1 }))
+        .rejects.toThrow('Invalid beer data');
+    });
+  });
+
+  describe('deleteImportedBeer', () => {
+    it('should delete existing beer', async () => {
+      const beer1 = { ...mockImportedBeer, id: 'beer-1' };
+      const beer2 = { ...mockImportedBeer, id: 'beer-2' };
+      mockStorageService.getItem.mockResolvedValueOnce([beer1, beer2]);
+      
+      await BeerHistoryService.deleteImportedBeer('beer-1');
+      
+      expect(mockStorageService.setItem).toHaveBeenCalledWith(
+        'imported_beers',
+        [beer2]
+      );
+    });
+
+    it('should throw error if beer not found', async () => {
+      mockStorageService.getItem.mockResolvedValueOnce([mockImportedBeer]);
+      
+      await expect(BeerHistoryService.deleteImportedBeer('non-existent'))
+        .rejects.toThrow('Beer with id non-existent not found');
     });
   });
 
   describe('filterBeers', () => {
     const testBeers: ImportedBeer[] = [
       {
+        ...mockImportedBeer,
         id: '1',
         name: 'Test IPA',
-        brewery: 'Brewery A',
         style: 'IPA',
+        brewery: 'Craft Brewery',
         rating: 4.5,
-        source: ImportSource.UNTAPPD,
-        tags: ['hoppy'],
-        importedAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-01'),
+        drankAt: new Date('2024-01-15'),
+        checkinDate: new Date('2024-01-15')
       },
       {
+        ...mockImportedBeer,
         id: '2',
-        name: 'Test Stout',
-        brewery: 'Brewery B',
+        name: 'Dark Stout',
         style: 'Stout',
+        brewery: 'Local Brewery',
         rating: 4.0,
-        source: ImportSource.RATEBEER,
-        tags: ['roasted'],
-        importedAt: new Date('2024-01-02'),
-        updatedAt: new Date('2024-01-02'),
+        drankAt: new Date('2024-02-01'),
+        checkinDate: new Date('2024-02-01')
       },
       {
+        ...mockImportedBeer,
         id: '3',
-        name: 'Test Lager',
-        brewery: 'Brewery A',
+        name: 'Light Lager',
         style: 'Lager',
-        rating: 3.5,
-        source: ImportSource.UNTAPPD,
-        tags: ['crisp'],
-        importedAt: new Date('2024-01-03'),
-        updatedAt: new Date('2024-01-03'),
-      },
+        brewery: 'Big Brewery',
+        rating: 3.0,
+        drankAt: new Date('2024-02-15'),
+        checkinDate: new Date('2024-02-15')
+      }
     ];
 
     beforeEach(() => {
-      (StorageService.getItem as jest.Mock).mockResolvedValue(testBeers);
+      mockStorageService.getItem.mockResolvedValue(testBeers);
     });
 
     it('should filter by style', async () => {
-      const result = await BeerHistoryService.filterBeers({
-        styles: ['IPA'],
-      });
-
+      const filter: BeerFilter = { styles: ['IPA'] };
+      const result = await BeerHistoryService.filterBeers(filter);
+      
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Test IPA');
+      expect(result[0].style).toBe('IPA');
+    });
+
+    it('should filter by multiple styles', async () => {
+      const filter: BeerFilter = { styles: ['IPA', 'Stout'] };
+      const result = await BeerHistoryService.filterBeers(filter);
+      
+      expect(result).toHaveLength(2);
+      expect(result.map(b => b.style)).toContain('IPA');
+      expect(result.map(b => b.style)).toContain('Stout');
     });
 
     it('should filter by brewery', async () => {
-      const result = await BeerHistoryService.filterBeers({
-        breweries: ['Brewery A'],
-      });
-
-      expect(result).toHaveLength(2);
-      expect(result.map(b => b.name)).toContain('Test IPA');
-      expect(result.map(b => b.name)).toContain('Test Lager');
+      const filter: BeerFilter = { breweries: ['Local Brewery'] };
+      const result = await BeerHistoryService.filterBeers(filter);
+      
+      expect(result).toHaveLength(1);
+      expect(result[0].brewery).toBe('Local Brewery');
     });
 
     it('should filter by rating range', async () => {
-      const result = await BeerHistoryService.filterBeers({
-        ratingRange: {min: 4.0, max: 5.0},
-      });
-
+      const filter: BeerFilter = { ratingRange: { min: 4.0, max: 4.5 } };
+      const result = await BeerHistoryService.filterBeers(filter);
+      
       expect(result).toHaveLength(2);
-      expect(result.map(b => b.rating)).toEqual([4.5, 4.0]);
+      result.forEach(beer => {
+        expect(beer.rating).toBeGreaterThanOrEqual(4.0);
+        expect(beer.rating!).toBeLessThanOrEqual(4.5);
+      });
+    });
+
+    it('should filter by date range', async () => {
+      const filter: BeerFilter = {
+        dateRange: {
+          start: new Date('2024-02-01'),
+          end: new Date('2024-02-28')
+        }
+      };
+      const result = await BeerHistoryService.filterBeers(filter);
+      
+      expect(result).toHaveLength(2);
+      expect(result.map(b => b.id)).toContain('2');
+      expect(result.map(b => b.id)).toContain('3');
     });
 
     it('should filter by search text', async () => {
-      const result = await BeerHistoryService.filterBeers({
-        searchText: 'stout',
-      });
-
+      const filter: BeerFilter = { searchText: 'stout' };
+      const result = await BeerHistoryService.filterBeers(filter);
+      
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Test Stout');
+      expect(result[0].name).toBe('Dark Stout');
     });
 
     it('should combine multiple filters', async () => {
-      const result = await BeerHistoryService.filterBeers({
-        styles: ['IPA', 'Lager'],
-        breweries: ['Brewery A'],
-        ratingRange: {min: 4.0, max: 5.0},
-      });
-
+      const filter: BeerFilter = {
+        styles: ['IPA', 'Stout'],
+        minRating: 4.0,
+        searchText: 'Test'
+      };
+      const result = await BeerHistoryService.filterBeers(filter);
+      
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Test IPA');
+    });
+
+    it('should return all beers with empty filter', async () => {
+      const result = await BeerHistoryService.filterBeers({});
+      expect(result).toEqual(testBeers);
     });
   });
 
   describe('getBeerStats', () => {
-    it('should calculate statistics correctly', async () => {
-      const beers: ImportedBeer[] = [
-        {
-          id: '1',
-          name: 'Beer 1',
-          brewery: 'Brewery A',
-          style: 'IPA',
-          rating: 4.5,
-          source: ImportSource.UNTAPPD,
-          tags: [],
-          importedAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '2',
-          name: 'Beer 2',
-          brewery: 'Brewery A',
-          style: 'IPA',
-          rating: 4.0,
-          source: ImportSource.UNTAPPD,
-          tags: [],
-          importedAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '3',
-          name: 'Beer 3',
-          brewery: 'Brewery B',
-          style: 'Stout',
-          rating: 3.5,
-          source: ImportSource.UNTAPPD,
-          tags: [],
-          importedAt: new Date(),
-          updatedAt: new Date(),
-        },
+    it('should calculate statistics', async () => {
+      const beers = [
+        { ...mockImportedBeer, style: 'IPA', rating: 4.5, abv: 6.5 },
+        { ...mockImportedBeer, style: 'IPA', rating: 4.0, abv: 6.0 },
+        { ...mockImportedBeer, style: 'Stout', rating: 4.2, abv: 8.0 },
+        { ...mockImportedBeer, style: 'Stout', rating: 3.0, abv: 7.5 }
       ];
-
-      (StorageService.getItem as jest.Mock).mockResolvedValue(beers);
-
+      mockStorageService.getItem.mockResolvedValueOnce(beers);
+      
       const stats = await BeerHistoryService.getBeerStats();
-
-      expect(stats).toEqual({
-        totalCount: 3,
-        averageRating: 4.0,
-        topBreweries: [
-          {name: 'Brewery A', count: 2},
-          {name: 'Brewery B', count: 1},
-        ],
-        topStyles: [
-          {name: 'IPA', count: 2},
-          {name: 'Stout', count: 1},
-        ],
-      });
+      
+      expect(stats.totalCount).toBe(4);
+      expect(stats.averageRating).toBeCloseTo(3.9, 1);  // (4.5 + 4.0 + 4.2 + 3.0) / 4 = 3.925
+      expect(stats.topStyles[0].name).toBe('IPA');
+      expect(stats.topBreweries[0].name).toBe('Test Brewery');
     });
 
     it('should handle empty beer list', async () => {
-      (StorageService.getItem as jest.Mock).mockResolvedValue([]);
-
+      mockStorageService.getItem.mockResolvedValueOnce([]);
+      
       const stats = await BeerHistoryService.getBeerStats();
-
-      expect(stats).toEqual({
-        totalCount: 0,
-        averageRating: 0,
-        topBreweries: [],
-        topStyles: [],
-      });
+      
+      expect(stats.totalCount).toBe(0);
+      expect(stats.averageRating).toBe(0);
+      expect(stats.topStyles).toEqual([]);
+      expect(stats.topBreweries).toEqual([]);
     });
   });
 
-  describe('updateImportedBeer', () => {
-    it('should update existing beer', async () => {
-      const existingBeer: ImportedBeer = {
-        id: 'test-id',
-        ...mockBeer,
-        importedAt: new Date(),
-      };
+  describe('clearAllBeers', () => {
+    it('should clear all beers', async () => {
+      await BeerHistoryService.clearAllBeers();
+      
+      expect(mockStorageService.removeItem).toHaveBeenCalledWith('imported_beers');
+    });
+  });
 
-      (StorageService.getItem as jest.Mock).mockResolvedValue([existingBeer]);
-      (StorageService.setItem as jest.Mock).mockResolvedValue(undefined);
+  describe('validateImportedBeer', () => {
+    it('should validate required fields', () => {
+      const invalidBeers = [
+        { ...mockImportedBeer, id: '' },
+        { ...mockImportedBeer, name: '' },
+        { ...mockImportedBeer, brewery: '' },
+        { ...mockImportedBeer, source: null },
+        { ...mockImportedBeer, importedAt: null }
+      ];
 
-      await BeerHistoryService.updateImportedBeer('test-id', {rating: 5});
-
-      expect(StorageService.setItem).toHaveBeenCalledWith(
-        'imported_beers',
-        expect.arrayContaining([
-          expect.objectContaining({
-            id: 'test-id',
-            rating: 5,
-            updatedAt: expect.any(Date),
-          }),
-        ])
-      );
+      invalidBeers.forEach(beer => {
+        const result = (BeerHistoryService as any).validateImportedBeer(beer);
+        expect(result.isValid).toBe(false);
+        expect(result.errors.length).toBeGreaterThan(0);
+      });
     });
 
-    it('should throw error if beer not found', async () => {
-      (StorageService.getItem as jest.Mock).mockResolvedValue([]);
+    it('should validate ABV range', () => {
+      const invalidABVs = [-1, 101];
+      
+      invalidABVs.forEach(abv => {
+        const beer = { ...mockImportedBeer, abv };
+        const result = (BeerHistoryService as any).validateImportedBeer(beer);
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain('ABV must be a number between 0 and 100');
+      });
+    });
 
-      await expect(
-        BeerHistoryService.updateImportedBeer('non-existent', {rating: 5})
-      ).rejects.toThrow('Beer with id non-existent not found');
+    it('should validate IBU range', () => {
+      const invalidIBUs = [-1];
+      
+      invalidIBUs.forEach(ibu => {
+        const beer = { ...mockImportedBeer, ibu };
+        const result = (BeerHistoryService as any).validateImportedBeer(beer);
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain('IBU must be a positive number');
+      });
+    });
+
+    it('should validate rating range', () => {
+      const invalidRatings = [-1, 6];
+      
+      invalidRatings.forEach(rating => {
+        const beer = { ...mockImportedBeer, rating };
+        const result = (BeerHistoryService as any).validateImportedBeer(beer);
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain('Rating must be a number between 0 and 5');
+      });
+    });
+
+    it('should validate import source', () => {
+      const beer = { ...mockImportedBeer, source: 'invalid' as any };
+      const result = (BeerHistoryService as any).validateImportedBeer(beer);
+      
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Invalid import source');
+    });
+
+    it('should accept valid beer', () => {
+      const result = (BeerHistoryService as any).validateImportedBeer(mockImportedBeer);
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
     });
   });
 });

@@ -1,4 +1,4 @@
-import {AppSettings, ValidationResult} from '@types';
+import {AppSettings, ValidationResult} from '@/types';
 import {StorageService} from './StorageService';
 
 export class SettingsService {

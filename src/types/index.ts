@@ -3,4 +3,4 @@ export * from './beer';
 export * from './session';
 export * from './prompt';
 export * from './storage';
-export * from './navigation';
+// Navigation types are React Native specific - not exported for Next.js
