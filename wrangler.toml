@@ -1,14 +1,11 @@
 name = "nextpint"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = ".vercel/output/static"
+compatibility_flags = ["nodejs_compat"]
 
 # 環境変数の設定例（必要に応じて追加）
 [vars]
 NODE_ENV = "production"
-
-# ビルドコマンドの設定
-[build]
-command = "npm run pages:build"
 
 # カスタムドメイン設定（オプション）
 # [[routes]]

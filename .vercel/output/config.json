@@ -2,9 +2,23 @@
   "version": 3,
   "routes": [
     {
-      "src": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$",
+      "src": "^(?:/((?!\\.well-known(?:/.*)?)(?:[^/]+/)*[^/]+\\.\\w+))/$",
       "headers": {
         "Location": "/$1"
+      },
+      "status": 308,
+      "missing": [
+        {
+          "type": "header",
+          "key": "x-nextjs-data"
+        }
+      ],
+      "continue": true
+    },
+    {
+      "src": "^(?:/((?!\\.well-known(?:/.*)?)(?:[^/]+/)*[^/\\.]+))$",
+      "headers": {
+        "Location": "/$1/"
       },
       "status": 308,
       "continue": true
@@ -95,29 +109,20 @@
       "check": true
     },
     {
-      "src": "^/api(/.*)?$",
+      "handle": "resource"
+    },
+    {
+      "src": "/.*",
       "status": 404
     },
     {
       "handle": "miss"
     },
     {
-      "src": "^/api/(.+)(?:\\.(?:ts))$",
-      "dest": "/api/$1",
-      "check": true
-    },
-    {
       "src": "/_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+",
       "status": 404,
       "check": true,
       "dest": "$0"
-    },
-    {
-      "handle": "resource"
-    },
-    {
-      "src": "/.*",
-      "status": 404
     },
     {
       "handle": "rewrite"
@@ -139,7 +144,7 @@
       "handle": "hit"
     },
     {
-      "src": "/_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|lju17ShEYFY9ESo6pre\\-h)/.+",
+      "src": "/_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|nextpint\\-cf\\-build)/.+",
       "headers": {
         "cache-control": "public,max-age=31536000,immutable"
       },
