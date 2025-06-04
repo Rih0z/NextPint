@@ -26,6 +26,7 @@ export interface SessionProfile {
   constraints: SessionConstraints;
   searchKeywords: string[];
   timeFrame?: TimeFrame;
+  includeSnsHistory?: boolean;
 }
 
 export interface TastePreference {

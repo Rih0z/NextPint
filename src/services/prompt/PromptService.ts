@@ -35,7 +35,8 @@ export class PromptService implements IPromptService {
       location: profile.constraints.location || 'any location',
       budget: profile.constraints.budget || 'any budget',
       keywords: profile.searchKeywords.join(', '),
-      constraints: profile.constraints.other?.join(', ') || 'none'
+      constraints: profile.constraints.other?.join(', ') || 'none',
+      snsHistorySection: profile.includeSnsHistory ? this.getSnsHistorySection() : ''
     });
   }
 
@@ -78,6 +79,10 @@ export class PromptService implements IPromptService {
    * Generate fallback prompt when no template is available
    */
   private generateFallbackPrompt(profile: SessionProfile): string {
+    const snsSection = profile.includeSnsHistory ? `
+
+${this.getSnsHistorySection()}` : '';
+
     return `I'm looking for beer recommendations with the following preferences:
 
 Goal: ${profile.sessionGoal}
@@ -87,8 +92,30 @@ Tastes to avoid: ${profile.tastePreference.avoid.join(', ') || 'none'}
 Location: ${profile.constraints.location || 'any'}
 Budget: ${profile.constraints.budget || 'flexible'}
 Additional keywords: ${profile.searchKeywords.join(', ') || 'none'}
-
+${snsSection}
 Please provide personalized beer recommendations with detailed explanations of why each beer matches my preferences. Include brewery information, tasting notes, and where I might find these beers.`;
+  }
+
+  /**
+   * Generate SNS history input section
+   */
+  private getSnsHistorySection(): string {
+    return `
+=== YOUR BEER HISTORY (OPTIONAL) ===
+If you have any beer-related posts or check-ins from social media (Instagram, X/Twitter, Untappd, Facebook, etc.), please paste them below. This will help me provide more personalized recommendations based on your actual beer experiences and preferences.
+
+[Please paste your SNS posts/check-ins here]
+
+Examples of what to include:
+- Instagram posts about beers you've enjoyed
+- Untappd check-ins with ratings and comments
+- Twitter/X posts about brewery visits
+- Facebook posts about beer events or tastings
+- Any other social media content related to your beer journey
+
+Don't worry if you don't have any - I can still provide great recommendations based on your preferences above!
+===================================
+`;
   }
 
   /**
@@ -117,7 +144,7 @@ Please provide personalized beer recommendations with detailed explanations of w
 - Additional requirements: {{constraints}}
 
 **Keywords/Interests:** {{keywords}}
-
+{{snsHistorySection}}
 Please provide me with:
 1. 3-5 specific beer recommendations that match my preferences
 2. Detailed tasting notes for each recommendation

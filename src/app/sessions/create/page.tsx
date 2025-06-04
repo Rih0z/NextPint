@@ -15,7 +15,8 @@ import {
   X,
   Copy,
   Check,
-  ArrowLeft
+  ArrowLeft,
+  Share2
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { ServiceFactory } from '@/application/factories/ServiceFactory';
@@ -30,6 +31,7 @@ interface FormData {
   budget: string;
   keywords: string[];
   constraints: string[];
+  includeSnsHistory: boolean;
 }
 
 export default function CreateSessionPage() {
@@ -47,7 +49,8 @@ export default function CreateSessionPage() {
     location: '',
     budget: '',
     keywords: [],
-    constraints: []
+    constraints: [],
+    includeSnsHistory: false
   });
 
   const [newKeyword, setNewKeyword] = useState('');
@@ -116,7 +119,8 @@ export default function CreateSessionPage() {
           budget: formData.budget || undefined,
           other: formData.constraints
         },
-        searchKeywords: formData.keywords
+        searchKeywords: formData.keywords,
+        includeSnsHistory: formData.includeSnsHistory
       };
 
       // Generate prompt using PromptService
@@ -424,6 +428,42 @@ export default function CreateSessionPage() {
           ))}
         </div>
       </div>
+
+      <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg p-6 border border-blue-500/20">
+        <div className="flex items-center gap-3 mb-4">
+          <Share2 size={24} className="text-blue-400" />
+          <h3 className="font-medium text-lg">SNS投稿の活用（オプション）</h3>
+        </div>
+        
+        <p className="text-text-secondary mb-4">
+          あなたの過去のビール投稿を含めることで、より精度の高い推奨が可能になります
+        </p>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={formData.includeSnsHistory}
+            onChange={(e) => setFormData(prev => ({ ...prev, includeSnsHistory: e.target.checked }))}
+            className="w-5 h-5 rounded bg-background-secondary border-gray-600 text-primary-500 focus:ring-primary-500"
+          />
+          <span className="text-sm">
+            AIプロンプトにSNS投稿入力欄を含める
+          </span>
+        </label>
+
+        {formData.includeSnsHistory && (
+          <div className="mt-4 p-4 bg-black/20 rounded-lg">
+            <p className="text-sm text-text-secondary">
+              生成されるプロンプトに以下が含まれます：
+            </p>
+            <ul className="text-sm text-text-secondary mt-2 space-y-1">
+              <li>• Instagram/X/Untappd等の投稿入力欄</li>
+              <li>• 過去のビール体験を共有する案内</li>
+              <li>• プライバシーに配慮した任意入力</li>
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -484,7 +524,8 @@ export default function CreateSessionPage() {
               location: '',
               budget: '',
               keywords: [],
-              constraints: []
+              constraints: [],
+              includeSnsHistory: false
             });
             setGeneratedPrompt('');
           }}
