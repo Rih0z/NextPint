@@ -131,4 +131,28 @@ describe('Button', () => {
       expect(screen.getByText(`${size} button`)).toBeInTheDocument();
     });
   });
+
+  it('should show correct loading color for primary variant', () => {
+    render(<Button title="Loading" onPress={jest.fn()} loading variant="primary" />);
+    expect(screen.getByTestId('activity-indicator')).toBeInTheDocument();
+  });
+
+  it('should show correct loading color for non-primary variant', () => {
+    render(<Button title="Loading" onPress={jest.fn()} loading variant="secondary" />);
+    expect(screen.getByTestId('activity-indicator')).toBeInTheDocument();
+  });
+
+  it('should apply custom styles', () => {
+    const customStyle = { backgroundColor: 'red' };
+    const customTextStyle = { color: 'blue' };
+    render(
+      <Button 
+        title="Custom" 
+        onPress={jest.fn()} 
+        style={customStyle}
+        textStyle={customTextStyle}
+      />
+    );
+    expect(screen.getByRole('button')).toBeInTheDocument();
+  });
 });

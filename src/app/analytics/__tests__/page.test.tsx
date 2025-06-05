@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { useTranslation } from 'react-i18next';
 import AnalyticsPage from '../page';
@@ -69,68 +69,84 @@ describe('AnalyticsPage', () => {
     mockAnalyticsService.exportData.mockReturnValue(JSON.stringify(mockInsights));
   });
 
-  it('should render without crashing', () => {
-    render(<AnalyticsPage />);
+  it('should render without crashing', async () => {
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
     expect(screen.getByTestId('navigation')).toBeInTheDocument();
   });
 
-  it('should track page view on mount', () => {
-    render(<AnalyticsPage />);
+  it('should track page view on mount', async () => {
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
     expect(mockAnalyticsService.trackEvent).toHaveBeenCalledWith('page_view', { page: 'analytics' });
   });
 
   it('should load and display insights', async () => {
-    render(<AnalyticsPage />);
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
 
     await waitFor(() => {
       expect(mockAnalyticsService.getInsights).toHaveBeenCalled();
     });
 
     await waitFor(() => {
-      expect(screen.getByText('analytics.insights.totalBeers')).toBeInTheDocument();
-      expect(screen.getByText('analytics.insights.totalSessions')).toBeInTheDocument();
+      expect(screen.getByText('試したビール数')).toBeInTheDocument();
+      expect(screen.getByText('発見セッション数')).toBeInTheDocument();
     });
   });
 
   it('should handle loading errors gracefully', async () => {
     mockAnalyticsService.getInsights.mockRejectedValue(new Error('Failed to load insights'));
 
-    render(<AnalyticsPage />);
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
 
     await waitFor(() => {
       expect(mockAnalyticsService.getInsights).toHaveBeenCalled();
     });
   });
 
-  it('should display loading state initially', () => {
-    render(<AnalyticsPage />);
-    expect(screen.getByText('common.loading')).toBeInTheDocument();
+  it('should display loading state initially', async () => {
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
+    expect(screen.getByText('分析中...')).toBeInTheDocument();
   });
 
   it('should show refresh functionality', async () => {
-    render(<AnalyticsPage />);
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
 
     await waitFor(() => {
       expect(mockAnalyticsService.getInsights).toHaveBeenCalled();
     });
 
-    const refreshButton = screen.getByRole('button', { name: /refresh/i });
+    const refreshButton = screen.getByRole('button', { name: /更新/i });
     fireEvent.click(refreshButton);
 
     expect(mockAnalyticsService.trackEvent).toHaveBeenCalledWith('analytics_refresh');
   });
 
   it('should handle export functionality', async () => {
-    render(<AnalyticsPage />);
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
 
     await waitFor(() => {
-      const exportButton = screen.getByRole('button', { name: /export/i });
+      const exportButton = screen.getByRole('button', { name: /エクスポート/i });
       expect(exportButton).toBeInTheDocument();
     });
   });
 
   it('should display insights data when loaded', async () => {
-    render(<AnalyticsPage />);
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('50')).toBeInTheDocument(); // totalBeers
@@ -138,16 +154,20 @@ describe('AnalyticsPage', () => {
     });
   });
 
-  it('should show timeframe selector', async () => {
-    render(<AnalyticsPage />);
+  it('should show insights section', async () => {
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
 
     await waitFor(() => {
-      expect(screen.getByText('analytics.timeframe.all')).toBeInTheDocument();
+      expect(screen.getByText('ビール分析ダッシュボード')).toBeInTheDocument();
     });
   });
 
   it('should display personality type', async () => {
-    render(<AnalyticsPage />);
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/Explorer/)).toBeInTheDocument();
@@ -155,7 +175,9 @@ describe('AnalyticsPage', () => {
   });
 
   it('should show favorite styles', async () => {
-    render(<AnalyticsPage />);
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('IPA')).toBeInTheDocument();
@@ -164,11 +186,146 @@ describe('AnalyticsPage', () => {
   });
 
   it('should display discovery metrics', async () => {
-    render(<AnalyticsPage />);
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('75')).toBeInTheDocument(); // adventurousnessScore
       expect(screen.getByText('3')).toBeInTheDocument(); // newStylesThisMonth
+    });
+  });
+
+  it('should handle export data functionality', async () => {
+    // Mock DOM methods
+    const mockCreateElement = jest.spyOn(document, 'createElement');
+    const mockAppendChild = jest.spyOn(document.body, 'appendChild');
+    const mockRemoveChild = jest.spyOn(document.body, 'removeChild');
+    const mockClick = jest.fn();
+    const mockAnchor = { 
+      href: '', 
+      download: '', 
+      click: mockClick 
+    } as any;
+    
+    mockCreateElement.mockReturnValue(mockAnchor);
+    mockAppendChild.mockImplementation(() => mockAnchor);
+    mockRemoveChild.mockImplementation(() => mockAnchor);
+
+    global.URL.createObjectURL = jest.fn(() => 'mock-url');
+    global.URL.revokeObjectURL = jest.fn();
+
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
+
+    await waitFor(() => {
+      const exportButton = screen.getByRole('button', { name: /エクスポート/i });
+      fireEvent.click(exportButton);
+    });
+
+    expect(mockAnalyticsService.exportData).toHaveBeenCalled();
+    expect(mockAnalyticsService.trackEvent).toHaveBeenCalledWith('analytics_export');
+    
+    // Cleanup
+    mockCreateElement.mockRestore();
+    mockAppendChild.mockRestore();
+    mockRemoveChild.mockRestore();
+  });
+
+  it('should handle export error', async () => {
+    mockAnalyticsService.exportData.mockImplementation(() => {
+      throw new Error('Export failed');
+    });
+
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+    await act(async () => {
+      render(<AnalyticsPage />);
+    });
+
+    await waitFor(() => {
+      const exportButton = screen.getByRole('button', { name: /エクスポート/i });
+      fireEvent.click(exportButton);
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith('データのエクスポートに失敗しました');
+    alertSpy.mockRestore();
+  });
+
+  it('should handle share with navigator.share', async () => {
+    const mockShare = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: mockShare, configurable: true });
+
+    render(<AnalyticsPage />);
+
+    await waitFor(() => {
+      const shareButton = screen.getByRole('button', { name: /共有/i });
+      fireEvent.click(shareButton);
+    });
+
+    expect(mockShare).toHaveBeenCalled();
+    expect(mockAnalyticsService.trackEvent).toHaveBeenCalledWith('analytics_shared', { method: 'native' });
+  });
+
+  it('should handle share with clipboard fallback', async () => {
+    // Remove navigator.share
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+    
+    const mockWriteText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { 
+      value: { writeText: mockWriteText }, 
+      configurable: true 
+    });
+
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+    render(<AnalyticsPage />);
+
+    await waitFor(() => {
+      const shareButton = screen.getByRole('button', { name: /共有/i });
+      fireEvent.click(shareButton);
+    });
+
+    expect(mockWriteText).toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith('統計情報をクリップボードにコピーしました');
+    expect(mockAnalyticsService.trackEvent).toHaveBeenCalledWith('analytics_shared', { method: 'clipboard' });
+    
+    alertSpy.mockRestore();
+  });
+
+  it('should handle share error', async () => {
+    const mockShare = jest.fn().mockRejectedValue(new Error('Share failed'));
+    Object.defineProperty(navigator, 'share', { value: mockShare, configurable: true });
+
+    render(<AnalyticsPage />);
+
+    await waitFor(() => {
+      const shareButton = screen.getByRole('button', { name: /共有/i });
+      fireEvent.click(shareButton);
+    });
+
+    expect(mockShare).toHaveBeenCalled();
+  });
+
+  it('should show no data state when totalBeers is 0', async () => {
+    mockAnalyticsService.getInsights.mockResolvedValue({
+      ...mockInsights,
+      totalBeers: 0
+    });
+
+    render(<AnalyticsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('まだ分析データがありません')).toBeInTheDocument();
+    });
+  });
+
+  it('should show personality information', async () => {
+    render(<AnalyticsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('あなたのビア・パーソナリティ')).toBeInTheDocument();
     });
   });
 });

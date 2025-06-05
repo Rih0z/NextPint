@@ -62,6 +62,76 @@ export class PromptService implements IPromptService {
   }
 
   /**
+   * Generate data import prompt for AI assistants
+   */
+  async generateDataImportPrompt(): Promise<string> {
+    const template = await this.getTemplate('data-import-wizard');
+    
+    if (!template) {
+      return this.generateFallbackImportPrompt();
+    }
+
+    return template.template;
+  }
+
+  /**
+   * Parse and validate JSON output from AI assistant
+   */
+  async parseImportData(jsonString: string): Promise<{
+    userProfile?: any;
+    beerHistory?: any[];
+    importMetadata?: any;
+    isValid: boolean;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    
+    try {
+      const data = JSON.parse(jsonString);
+      
+      // Validate required structure
+      if (!data.userProfile && !data.beerHistory) {
+        errors.push('データにuserProfileまたはbeerHistoryが含まれていません');
+      }
+      
+      // Validate userProfile structure
+      if (data.userProfile) {
+        if (!data.userProfile.preferences) {
+          errors.push('userProfile.preferencesが見つかりません');
+        }
+      }
+      
+      // Validate beerHistory structure
+      if (data.beerHistory && Array.isArray(data.beerHistory)) {
+        data.beerHistory.forEach((beer: any, index: number) => {
+          if (!beer.name || !beer.brewery) {
+            errors.push(`ビール履歴 ${index + 1}: nameまたはbreweryが不足しています`);
+          }
+        });
+      }
+      
+      return {
+        userProfile: data.userProfile,
+        beerHistory: data.beerHistory || [],
+        importMetadata: data.importMetadata || {
+          importDate: new Date().toISOString(),
+          source: 'ai-assistant',
+          version: '1.0'
+        },
+        isValid: errors.length === 0,
+        errors
+      };
+      
+    } catch (error) {
+      errors.push('JSONの解析に失敗しました: ' + (error as Error).message);
+      return {
+        isValid: false,
+        errors
+      };
+    }
+  }
+
+  /**
    * Process template by replacing variables
    */
   private processTemplate(template: string, variables: Record<string, string>): string {
@@ -94,6 +164,43 @@ Budget: ${profile.constraints.budget || 'flexible'}
 Additional keywords: ${profile.searchKeywords.join(', ') || 'none'}
 ${snsSection}
 Please provide personalized beer recommendations with detailed explanations of why each beer matches my preferences. Include brewery information, tasting notes, and where I might find these beers.`;
+  }
+
+  /**
+   * Generate fallback data import prompt
+   */
+  private generateFallbackImportPrompt(): string {
+    return `# ビール履歴データインポート
+
+あなたの現在のビール関連情報をNextPintアプリにインポートするため、以下の情報を段階的に教えてください。
+
+## ステップ1: 基本的な好み
+- 好きなビールスタイル（IPA、ラガー、スタウト等）
+- 苦味、甘味の好み（1-5で評価）
+- 避けたい味や種類
+
+## ステップ2: ビール履歴
+- 最近飲んだビール（名前、ブルワリー、評価）
+- お気に入りのビール
+- SNSの投稿やスクリーンショットがあれば共有
+
+## ステップ3: その他の情報
+- よく行くブルワリーやバー
+- 予算範囲
+- 住んでいる地域
+
+すべての情報を収集後、以下の形式でJSON出力してください：
+
+\`\`\`json
+{
+  "userProfile": {
+    "preferences": {...},
+    "settings": {...}
+  },
+  "beerHistory": [...],
+  "importMetadata": {...}
+}
+\`\`\``;
   }
 
   /**
@@ -300,6 +407,154 @@ Focus on creating a memorable culinary experience that enhances both the food an
           tags: ['food', 'pairing', 'culinary'],
           author: 'NextPint Team',
           language: 'English'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'data-import-wizard',
+        name: 'ビール履歴データインポート',
+        description: 'ユーザーの現在のビール関連データを段階的に収集してJSON形式で出力',
+        category: PromptCategory.IMPORT,
+        version: '1.0.0',
+        locale: 'ja-JP',
+        template: `# ビール履歴データインポートアシスタント
+
+あなたはNextPintアプリのデータインポート専門アシスタントです。ユーザーの現在のビール関連情報を段階的に収集し、最終的にJSON形式で出力します。
+
+## 収集する情報
+1. **ビール履歴**: 過去に飲んだビールの記録
+2. **好みプロファイル**: 味の好み、お気に入りスタイル
+3. **ブルワリー情報**: よく行く・好きなブルワリー
+4. **最近の活動**: SNS投稿、チェックイン、写真など
+
+## 段階的な質問プロセス
+
+### ステップ1: 基本情報の確認
+まず、以下の情報について教えてください：
+
+**Q1: ビール体験について**
+- ビールを飲み始めてどのくらいになりますか？
+- 普段どのくらいの頻度でビールを飲みますか？
+- 主にどこでビールを飲みますか？（自宅、バー、レストラン、ブルワリー等）
+
+**回答をお待ちしています。回答後、次の質問に進みます。**
+
+### ステップ2: 好みの詳細情報
+次に、あなたの味の好みについて教えてください：
+
+**Q2: 味の好みについて**
+- 好きなビールスタイルは何ですか？（IPA、ラガー、スタウト、ピルスナー等）
+- 苦味、甘味、酸味、麦芽味、ホップ味のうち、どれが好きですか？（1-5で評価）
+- 避けたいビールスタイルや味はありますか？
+
+**回答をお待ちしています。**
+
+### ステップ3: ビール履歴の収集
+あなたのビール体験について詳しく教えてください：
+
+**Q3: ビール履歴について**
+以下の方法でビール履歴を共有してください：
+- UntappdやRateBeerのスクリーンショット
+- Instagram/X(Twitter)のビール関連投稿のスクリーンショット
+- 最近飲んだビールの写真
+- ビールメモやレビューのテキスト
+- お気に入りビールのリスト
+
+**情報を画像やテキストで共有してください。**
+
+### ステップ4: ブルワリー・場所情報
+ビールを楽しむ場所について教えてください：
+
+**Q4: ブルワリーと場所について**
+- よく行くブルワリーやビアバーはありますか？
+- お住まいの地域はどちらですか？
+- ビール購入の予算はだいたいどのくらいですか？
+
+**回答をお待ちしています。**
+
+### ステップ5: その他の情報
+最後に補足情報があれば教えてください：
+
+**Q5: 補足情報**
+- ビールと一緒によく食べる料理は？
+- ビールイベントやフェスティバルに参加したことはありますか？
+- その他、ビールに関する特別な体験や思い出は？
+
+**回答をお待ちしています。**
+
+---
+
+## 重要な指示
+
+1. **段階的進行**: 必ず一つのステップずつ進めてください
+2. **確認**: 各ステップで回答を確認してから次に進む
+3. **画像解析**: スクリーンショットや写真は詳細に分析して情報を抽出
+4. **最終確認**: 全ての情報収集が完了したら「すべての情報収集が完了しました。JSON出力の準備ができています。」と述べる
+5. **JSON出力**: ユーザーが「完了した」と答えたら、以下の形式でJSON出力
+
+## JSON出力フォーマット
+
+\`\`\`json
+{
+  "userProfile": {
+    "preferences": {
+      "favoriteStyles": ["IPA", "Stout"],
+      "flavorProfile": {
+        "hoppy": 4,
+        "malty": 3,
+        "bitter": 4,
+        "sweet": 2,
+        "sour": 2,
+        "alcohol": 3
+      },
+      "avoidList": ["Light Lager"],
+      "preferredBreweries": ["BrewDog", "Stone Brewing"],
+      "budgetRange": {
+        "min": 500,
+        "max": 2000,
+        "currency": "JPY"
+      },
+      "locationPreferences": ["Tokyo", "Shibuya"]
+    },
+    "settings": {
+      "language": "ja-JP",
+      "theme": "dark",
+      "notifications": true
+    }
+  },
+  "beerHistory": [
+    {
+      "name": "BrewDog Punk IPA",
+      "brewery": "BrewDog",
+      "style": "IPA",
+      "rating": 4.2,
+      "abv": 5.6,
+      "notes": "Great hoppy flavor",
+      "checkinDate": "2024-01-15",
+      "location": "Shibuya Beer Bar",
+      "source": "manual",
+      "tags": ["hoppy", "citrus"]
+    }
+  ],
+  "importMetadata": {
+    "importDate": "2024-01-20T10:30:00Z",
+    "source": "ai-assistant",
+    "completeness": "high",
+    "version": "1.0"
+  }
+}
+\`\`\`
+
+それでは、ステップ1から始めましょう！`,
+        variables: [],
+        metadata: {
+          supportedAI: ['chatgpt', 'claude', 'gemini'],
+          estimatedTokens: 1200,
+          difficulty: 'easy',
+          tags: ['import', 'data-collection', 'wizard', 'japanese'],
+          author: 'NextPint Team',
+          language: 'Japanese'
         },
         createdAt: new Date(),
         updatedAt: new Date()

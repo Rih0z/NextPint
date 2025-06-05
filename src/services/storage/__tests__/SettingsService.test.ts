@@ -246,18 +246,31 @@ describe('SettingsService', () => {
       const exported = await SettingsService.exportSettings();
       const parsed = JSON.parse(exported);
       
-      expect(parsed).toEqual(mockAppSettings);
+      // JSON parse converts Date objects to strings, so compare accordingly
+      const expectedMockSettings = {
+        ...mockAppSettings,
+        firstLaunch: mockAppSettings.firstLaunch.toISOString(),
+        lastLaunch: mockAppSettings.lastLaunch.toISOString()
+      };
+      
+      expect(parsed).toEqual(expectedMockSettings);
       expect(exported).toContain('\n'); // Should be formatted
     });
   });
 
   describe('importSettings', () => {
     it('should import valid settings', async () => {
-      const settingsJson = JSON.stringify(mockAppSettings);
+      // Create settings with string dates for JSON import
+      const settingsForImport = {
+        ...mockAppSettings,
+        firstLaunch: mockAppSettings.firstLaunch.toISOString(),
+        lastLaunch: mockAppSettings.lastLaunch.toISOString()
+      };
+      const settingsJson = JSON.stringify(settingsForImport);
       
       await SettingsService.importSettings(settingsJson);
       
-      expect(mockStorageService.setItem).toHaveBeenCalledWith('app_settings', mockAppSettings);
+      expect(mockStorageService.setItem).toHaveBeenCalledWith('app_settings', settingsForImport);
     });
 
     it('should reject invalid JSON', async () => {

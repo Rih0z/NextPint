@@ -21,6 +21,14 @@ export interface IPromptService {
   generateSessionPrompt(profile: any): Promise<string>;
   getTemplates(): Promise<any[]>;
   getTemplate(id: string): Promise<any>;
+  generateDataImportPrompt(): Promise<string>;
+  parseImportData(jsonString: string): Promise<{
+    userProfile?: any;
+    beerHistory?: any[];
+    importMetadata?: any;
+    isValid: boolean;
+    errors: string[];
+  }>;
 }
 
 export interface IAnalyticsService {

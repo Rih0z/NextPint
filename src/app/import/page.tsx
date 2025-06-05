@@ -12,13 +12,19 @@ import {
   Loader2,
   ArrowLeft,
   X,
-  Plus
+  Plus,
+  Bot,
+  ImageIcon
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
+import DataImportWizard from '@/components/DataImportWizard';
 import { ServiceFactory } from '@/application/factories/ServiceFactory';
+
+type ImportTab = 'files' | 'ai';
 
 export default function ImportPage() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ImportTab>('ai');
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -117,6 +123,15 @@ export default function ImportPage() {
     router.push('/history');
   };
 
+  const handleAIImportComplete = (data: any) => {
+    setError(null);
+    // AI import success is handled within the DataImportWizard component
+  };
+
+  const handleAIImportError = (errorMessage: string) => {
+    setError(errorMessage);
+  };
+
   // Success state
   if (results.length > 0) {
     const totalBeers = results.reduce((sum, result) => sum + result.beers.length, 0);
@@ -174,29 +189,71 @@ export default function ImportPage() {
               ビール履歴インポート
             </h1>
             <p className="text-text-secondary text-sm sm:text-base">
-              スクリーンショットからビール情報を自動抽出
+              {activeTab === 'ai' 
+                ? 'AIアシスタントでデータを収集・インポート'
+                : 'スクリーンショットからビール情報を自動抽出'
+              }
             </p>
           </div>
         </div>
 
-        {/* Instructions */}
-        <div className="glass-card rounded-xl p-6 mb-6 sm:mb-8">
-          <h2 className="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
-            <span className="text-2xl">📱</span>
-            対応アプリ
-          </h2>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {['Untappd', 'RateBeer', 'BeerAdvocate'].map((app) => (
-              <div key={app} className="flex items-center gap-3 p-3 bg-background-secondary rounded-lg">
-                <CheckCircle size={20} className="text-green-400 flex-shrink-0" />
-                <span className="font-medium">{app}</span>
-              </div>
-            ))}
+        {/* Tabs */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex space-x-1 bg-background-secondary rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('ai')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium transition-all ${
+                activeTab === 'ai'
+                  ? 'bg-primary-500 text-white shadow-lg'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Bot size={20} />
+              AIアシスタント
+            </button>
+            <button
+              onClick={() => setActiveTab('files')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium transition-all ${
+                activeTab === 'files'
+                  ? 'bg-primary-500 text-white shadow-lg'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <ImageIcon size={20} />
+              ファイルアップロード
+            </button>
           </div>
         </div>
 
-        {/* File Upload Area */}
+        {/* AI Import Tab */}
+        {activeTab === 'ai' && (
+          <DataImportWizard 
+            onImportComplete={handleAIImportComplete}
+            onError={handleAIImportError}
+          />
+        )}
+
+        {/* File Upload Tab */}
+        {activeTab === 'files' && (
+          <>
+            {/* Instructions */}
+            <div className="glass-card rounded-xl p-6 mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
+                <span className="text-2xl">📱</span>
+                対応アプリ
+              </h2>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {['Untappd', 'RateBeer', 'BeerAdvocate'].map((app) => (
+                  <div key={app} className="flex items-center gap-3 p-3 bg-background-secondary rounded-lg">
+                    <CheckCircle size={20} className="text-green-400 flex-shrink-0" />
+                    <span className="font-medium">{app}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* File Upload Area */}
         <div className="mb-6 sm:mb-8">
           <div
             className={`
@@ -336,34 +393,49 @@ export default function ImportPage() {
           </div>
         )}
 
-        {/* Tips */}
-        <div className="glass-card rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="text-2xl">💡</span>
-            より良い結果を得るためのコツ
-          </h3>
-          
-          <div className="space-y-3 text-sm sm:text-base">
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-primary-400 rounded-full flex-shrink-0 mt-2"></div>
-              <p className="text-text-secondary">
-                ビール名、醸造所名、評価が見やすいスクリーンショットを使用
-              </p>
+            {/* Tips */}
+            <div className="glass-card rounded-xl p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span className="text-2xl">💡</span>
+                より良い結果を得るためのコツ
+              </h3>
+              
+              <div className="space-y-3 text-sm sm:text-base">
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-primary-400 rounded-full flex-shrink-0 mt-2"></div>
+                  <p className="text-text-secondary">
+                    ビール名、醸造所名、評価が見やすいスクリーンショットを使用
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-primary-400 rounded-full flex-shrink-0 mt-2"></div>
+                  <p className="text-text-secondary">
+                    画像は鮮明で、文字がはっきり読める状態が理想的
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-primary-400 rounded-full flex-shrink-0 mt-2"></div>
+                  <p className="text-text-secondary">
+                    複数のビールが含まれるスクリーンショットも対応
+                  </p>
+                </div>
+              </div>
             </div>
+          </>
+        )}
+
+        {/* Global Error Display */}
+        {error && activeTab === 'ai' && (
+          <div className="glass-card rounded-xl p-6 border border-red-500/50 bg-red-500/10 mt-4">
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-primary-400 rounded-full flex-shrink-0 mt-2"></div>
-              <p className="text-text-secondary">
-                画像は鮮明で、文字がはっきり読める状態が理想的
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-primary-400 rounded-full flex-shrink-0 mt-2"></div>
-              <p className="text-text-secondary">
-                複数のビールが含まれるスクリーンショットも対応
-              </p>
+              <AlertCircle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-red-400 mb-1">エラーが発生しました</h3>
+                <p className="text-sm text-text-secondary">{error}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

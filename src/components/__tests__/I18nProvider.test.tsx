@@ -2,30 +2,36 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import I18nProvider from '../I18nProvider';
 
-// Mock react-i18next
-jest.mock('react-i18next', () => ({
-  initReactI18next: {
-    type: '3rdParty',
+// Mock the entire i18n system
+jest.mock('@/i18n', () => {
+  const mockI18n = {
     init: jest.fn(),
-  },
-  useTranslation: jest.fn(() => ({
+    isInitialized: false,
+    language: 'ja',
+    t: jest.fn((key: string) => key),
+    on: jest.fn(),
+    off: jest.fn(),
+    changeLanguage: jest.fn(),
+    use: jest.fn(function() { return this; }),
+    options: {},
+    store: {}
+  };
+  return { default: mockI18n };
+});
+
+jest.mock('react-i18next', () => ({
+  I18nextProvider: ({ children }: { children: React.ReactNode }) => 
+    <div data-testid="i18n-provider">{children}</div>,
+  useTranslation: () => ({
     t: (key: string) => key,
     i18n: {
-      language: 'ja-JP',
-      changeLanguage: jest.fn(),
-    },
-  })),
-  I18nextProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="i18n-provider">{children}</div>
-}));
-
-// Mock i18n
-jest.mock('@/i18n', () => ({
-  default: {
-    init: jest.fn(() => Promise.resolve()),
-    language: 'ja-JP',
-    changeLanguage: jest.fn(() => Promise.resolve()),
-    use: jest.fn(function() { return this; }),
-    t: jest.fn((key: string) => key),
+      language: 'ja',
+      changeLanguage: jest.fn()
+    }
+  }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: jest.fn()
   }
 }));
 

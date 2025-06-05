@@ -11,11 +11,12 @@ describe('PromptService', () => {
   describe('getTemplates', () => {
     it('should return default templates', async () => {
       const templates = await service.getTemplates();
-      expect(templates).toHaveLength(4);
+      expect(templates).toHaveLength(5);
       expect(templates[0].id).toBe('beer-discovery-session');
       expect(templates[1].id).toBe('taste-analysis');
       expect(templates[2].id).toBe('brewery-exploration');
       expect(templates[3].id).toBe('food-pairing');
+      expect(templates[4].id).toBe('data-import-wizard');
     });
 
     it('should return templates with correct structure', async () => {
@@ -212,6 +213,111 @@ describe('PromptService', () => {
         expect(Array.isArray(template.metadata.tags)).toBe(true);
         expect(template.metadata.tags.length).toBeGreaterThan(0);
       });
+    });
+  });
+
+  describe('generateDataImportPrompt', () => {
+    it('should generate data import prompt', async () => {
+      const prompt = await service.generateDataImportPrompt();
+      expect(prompt).toContain('ビール履歴データインポートアシスタント');
+      expect(prompt).toContain('段階的に収集');
+      expect(prompt).toContain('JSON形式で出力');
+      expect(prompt).toContain('ステップ1');
+    });
+
+    it('should use fallback prompt when template not found', async () => {
+      // Remove the template temporarily
+      const originalTemplate = await service.getTemplate('data-import-wizard');
+      (service as any).templates.delete('data-import-wizard');
+      
+      const prompt = await service.generateDataImportPrompt();
+      expect(prompt).toContain('ビール履歴データインポート');
+      expect(prompt).toContain('NextPintアプリにインポート');
+      
+      // Restore the template
+      if (originalTemplate) {
+        (service as any).templates.set('data-import-wizard', originalTemplate);
+      }
+    });
+  });
+
+  describe('parseImportData', () => {
+    it('should parse valid JSON data', async () => {
+      const validJson = {
+        userProfile: {
+          preferences: { favoriteStyles: ['IPA'] }
+        },
+        beerHistory: [
+          { name: 'Test Beer', brewery: 'Test Brewery' }
+        ],
+        importMetadata: { source: 'test' }
+      };
+
+      const result = await service.parseImportData(JSON.stringify(validJson));
+      
+      expect(result.isValid).toBe(true);
+      expect(result.userProfile).toEqual(validJson.userProfile);
+      expect(result.beerHistory).toEqual(validJson.beerHistory);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should handle invalid JSON', async () => {
+      const invalidJson = '{ invalid json }';
+      
+      const result = await service.parseImportData(invalidJson);
+      
+      expect(result.isValid).toBe(false);
+      expect(result.errors[0]).toContain('JSONの解析に失敗しました');
+    });
+
+    it('should validate required structure', async () => {
+      const invalidData = { someOtherData: 'test' };
+      
+      const result = await service.parseImportData(JSON.stringify(invalidData));
+      
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('データにuserProfileまたはbeerHistoryが含まれていません');
+    });
+
+    it('should validate userProfile structure', async () => {
+      const invalidProfile = {
+        userProfile: { invalidField: 'test' },
+        beerHistory: []
+      };
+      
+      const result = await service.parseImportData(JSON.stringify(invalidProfile));
+      
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('userProfile.preferencesが見つかりません');
+    });
+
+    it('should validate beerHistory structure', async () => {
+      const invalidHistory = {
+        userProfile: { preferences: { favoriteStyles: ['IPA'] } },
+        beerHistory: [
+          { invalidField: 'test' },
+          { name: 'Valid Beer', brewery: 'Valid Brewery' }
+        ]
+      };
+      
+      const result = await service.parseImportData(JSON.stringify(invalidHistory));
+      
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('ビール履歴 1: nameまたはbreweryが不足しています');
+    });
+
+    it('should add default importMetadata when missing', async () => {
+      const dataWithoutMetadata = {
+        userProfile: { preferences: { favoriteStyles: ['IPA'] } },
+        beerHistory: []
+      };
+      
+      const result = await service.parseImportData(JSON.stringify(dataWithoutMetadata));
+      
+      expect(result.isValid).toBe(true);
+      expect(result.importMetadata).toBeDefined();
+      expect(result.importMetadata.source).toBe('ai-assistant');
+      expect(result.importMetadata.version).toBe('1.0');
     });
   });
 });
